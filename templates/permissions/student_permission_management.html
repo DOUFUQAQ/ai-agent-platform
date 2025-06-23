@@ -1,0 +1,438 @@
+{% extends 'base.html' %} {% block title %}学生权限管理 - AI Agent Platform{% endblock %} {% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-graduation-cap me-2"></i>学生权限管理</h2>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#batchPermissionModal">
+                    <i class="fas fa-users-cog me-2"></i>批量分配权限
+                </button>
+            </div>
+
+            <!-- 权限统计 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-graduation-cap fa-2x me-3"></i>
+                                <div>
+                                    <h4 class="mb-0">{{ total_students|default:0 }}</h4>
+                                    <small>学生总数</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-check-circle fa-2x me-3"></i>
+                                <div>
+                                    <h4 class="mb-0">{{ students_with_permissions|default:0 }}</h4>
+                                    <small>已分配权限</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-cogs fa-2x me-3"></i>
+                                <div>
+                                    <h4 class="mb-0">{{ available_functions|default:0 }}</h4>
+                                    <small>可用功能</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-chart-bar fa-2x me-3"></i>
+                                <div>
+                                    <h4 class="mb-0">{{ avg_permissions|default:0 }}</h4>
+                                    <small>平均权限数</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 搜索和过滤 -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>搜索和过滤</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" name="search" placeholder="搜索学生姓名或学号" value="{{ request.GET.search }}">
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" name="permission_level">
+                                <option value="">所有权限级别</option>
+                                <option value="basic" {% if request.GET.permission_level == 'basic' %}selected{% endif %}>基础权限</option>
+                                <option value="intermediate" {% if request.GET.permission_level == 'intermediate' %}selected{% endif %}>中级权限</option>
+                                <option value="advanced" {% if request.GET.permission_level == 'advanced' %}selected{% endif %}>高级权限</option>
+                                <option value="none" {% if request.GET.permission_level == 'none' %}selected{% endif %}>无权限</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" name="function_filter">
+                                <option value="">所有功能</option>
+                                {% for function in available_function_list %}
+                                <option value="{{ function.id }}" {% if request.GET.function_filter == function.id|stringformat:"s" %}selected{% endif %}>{{ function.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-search me-2"></i>搜索
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 学生权限列表 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5>学生权限分配</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                                    </th>
+                                    <th>学生信息</th>
+                                    <th>学号</th>
+                                    <th>班级</th>
+                                    <th>已分配功能</th>
+                                    <th>权限级别</th>
+                                    <th>最后更新</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for student in students %}
+                                <tr>
+                                    <td>
+                                        <input type="checkbox" class="student-checkbox" value="{{ student.id }}">
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-user-graduate fa-lg me-2 text-primary"></i>
+                                            <div>
+                                                <strong>{{ student.username }}</strong> {% if student.email %}
+                                                <br><small class="text-muted">{{ student.email }}</small> {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ student.student_id|default:"未设置" }}</td>
+                                    <td>{{ student.class_name|default:"未分班" }}</td>
+                                    <td>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            {% for permission in student.permissions %}
+                                            <span class="badge bg-info">{{ permission.function.name }}</span> {% empty %}
+                                            <span class="text-muted">无权限</span> {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if student.permission_count >= 10 %}
+                                        <span class="badge bg-success">高级</span> {% elif student.permission_count >= 5 %}
+                                        <span class="badge bg-warning">中级</span> {% elif student.permission_count > 0 %}
+                                        <span class="badge bg-info">基础</span> {% else %}
+                                        <span class="badge bg-secondary">无权限</span> {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if student.last_permission_update %} {{ student.last_permission_update|date:"Y-m-d H:i" }} {% else %}
+                                        <span class="text-muted">从未更新</span> {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if student.is_active %}
+                                        <span class="badge bg-success">正常</span> {% else %}
+                                        <span class="badge bg-secondary">禁用</span> {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="editStudent({{ student.id }})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-info" onclick="viewStudentDetails({{ student.id }})">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="copyPermissions({{ student.id }})">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearPermissions({{ student.id }})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">
+                                        <i class="fas fa-graduation-cap fa-3x mb-3"></i>
+                                        <p>没有找到学生</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 批量操作按钮 -->
+                    <div class="d-flex gap-2 mb-3">
+                        <button type="button" class="btn btn-outline-primary" onclick="batchAssignPermissions()">
+                            <i class="fas fa-plus me-2"></i>批量分配权限
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" onclick="batchCopyPermissions()">
+                            <i class="fas fa-copy me-2"></i>批量复制权限
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" onclick="batchClearPermissions()">
+                            <i class="fas fa-trash me-2"></i>批量清除权限
+                        </button>
+                    </div>
+
+                    <!-- 分页 -->
+                    {% if is_paginated %}
+                    <nav aria-label="学生列表分页">
+                        <ul class="pagination justify-content-center">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">上一页</a>
+                            </li>
+                            {% endif %} {% for num in page_obj.paginator.page_range %} {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a>
+                            </li>
+                            {% endif %} {% endfor %} {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">下一页</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 批量权限分配模态框 -->
+<div class="modal fade" id="batchPermissionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">批量分配权限</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="batch_assign">
+                    <div class="mb-3">
+                        <label class="form-label">选择功能：</label>
+                        <div class="row">
+                            {% for function in available_function_list %}
+                            <div class="col-md-6 mb-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="batch_function_{{ function.id }}" name="functions" value="{{ function.id }}">
+                                    <label class="form-check-label" for="batch_function_{{ function.id }}">
+                                        {{ function.name }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">选择学生：</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="student_selection" id="selected_students" value="selected" checked>
+                            <label class="form-check-label" for="selected_students">
+                                仅选中的学生
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="student_selection" id="all_students" value="all">
+                            <label class="form-check-label" for="all_students">
+                                所有学生
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">分配权限</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.student-checkbox');
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    }
+
+    function getSelectedStudents() {
+        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    function viewStudentDetails(studentId) {
+        window.location.href = '/students/detail/' + studentId + '/';
+    }
+
+    function editStudent(studentId) {
+        window.location.href = '/permissions/students/' + studentId + '/';
+    }
+
+    function copyPermissions(studentId) {
+        const targetStudent = prompt('请输入目标学生ID（权限将复制给该学生）：');
+        if (targetStudent) {
+            fetch('/permissions/students/' + studentId + '/copy/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        target_student: targetStudent
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('权限复制成功！');
+                        location.reload();
+                    } else {
+                        alert('复制失败：' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('复制失败：' + error);
+                });
+        }
+    }
+
+    function clearPermissions(studentId) {
+        if (confirm('确定要清除该学生的所有权限吗？')) {
+            fetch('/permissions/students/' + studentId + '/clear/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('操作失败：' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('操作失败：' + error);
+                });
+        }
+    }
+
+    function batchAssignPermissions() {
+        const selectedStudents = getSelectedStudents();
+        if (selectedStudents.length === 0) {
+            alert('请先选择学生！');
+            return;
+        }
+        const modal = new bootstrap.Modal(document.getElementById('batchPermissionModal'));
+        modal.show();
+    }
+
+    function batchCopyPermissions() {
+        const selectedStudents = getSelectedStudents();
+        if (selectedStudents.length === 0) {
+            alert('请先选择学生！');
+            return;
+        }
+        const sourceStudent = prompt('请输入源学生ID（权限将从该学生复制）：');
+        if (sourceStudent) {
+            fetch('/permissions/students/batch-copy/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        source_student: sourceStudent,
+                        target_students: selectedStudents
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('批量复制成功！');
+                        location.reload();
+                    } else {
+                        alert('复制失败：' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('复制失败：' + error);
+                });
+        }
+    }
+
+    function batchClearPermissions() {
+        const selectedStudents = getSelectedStudents();
+        if (selectedStudents.length === 0) {
+            alert('请先选择学生！');
+            return;
+        }
+        if (confirm('确定要清除 ' + selectedStudents.length + ' 名学生的所有权限吗？')) {
+            fetch('/permissions/students/batch-clear/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        students: selectedStudents
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('批量清除成功！');
+                        location.reload();
+                    } else {
+                        alert('操作失败：' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('操作失败：' + error);
+                });
+        }
+    }
+</script>
+{% endblock %}

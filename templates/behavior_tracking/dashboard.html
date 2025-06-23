@@ -1,0 +1,135 @@
+﻿{% extends 'base.html' %} {% load static %} {% block title %}行为分析仪表板{% endblock %} {% block extra_css %}
+<style>
+    .stats-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        transition: transform 0.2s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #3498db;
+    }
+    
+    .stats-label {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        margin-top: 5px;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"> 行为分析仪表板</h1>
+        <div class="btn-group">
+            <a href="{% url 'behavior_tracking:user_list' %}" class="btn btn-primary">
+                <i class="fas fa-users"></i> 用户行为
+            </a>
+            <a href="{% url 'behavior_tracking:abnormal_management' %}" class="btn btn-warning">
+                <i class="fas fa-exclamation-triangle"></i> 异常检测
+            </a>
+            <a href="{% url 'behavior_tracking:function_analytics' %}" class="btn btn-info">
+                <i class="fas fa-chart-line"></i> 功能分析
+            </a>
+        </div>
+    </div>
+
+    <!-- 核心统计指标 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ dashboard_stats.today.sessions|default:0 }}</div>
+                <div class="stats-label">今日会话数</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ dashboard_stats.today.users|default:0 }}</div>
+                <div class="stats-label">今日活跃用户</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ dashboard_stats.today.messages|default:0 }}</div>
+                <div class="stats-label">今日消息数</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="stats-number">{{ dashboard_stats.week.users|default:0 }}</div>
+                <div class="stats-label">本周活跃用户</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 快速操作 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <h5><i class="fas fa-tools"></i> 快速操作</h5>
+                <div class="btn-group me-3">
+                    <button type="button" class="btn btn-primary" onclick="runBehaviorDetection()">
+                        <i class="fas fa-search"></i> 运行异常检测
+                    </button>
+                    <button type="button" class="btn btn-info" onclick="exportData()">
+                        <i class="fas fa-download"></i> 导出数据
+                    </button>
+                </div>
+                <small class="text-muted">
+                    运行异常检测将扫描今日所有活跃用户的行为模式，识别潜在的异常行为。
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 运行异常检测
+    function runBehaviorDetection() {
+        if (confirm('确定要运行异常行为检测吗？这将扫描所有今日活跃用户。')) {
+            fetch('{% url "behavior_tracking:run_detection" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value || ''
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('检测失败：' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('请求失败：' + error);
+                });
+        }
+    }
+
+    // 导出数据
+    function exportData() {
+        window.location.href = '{% url "behavior_tracking:export_data" %}';
+    }
+</script>
+{% endblock %}

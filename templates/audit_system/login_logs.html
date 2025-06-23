@@ -1,0 +1,44 @@
+{% extends "base.html" %} {% block title %}登录日志{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+    <h1 class="h3 mb-4">登录日志</h1>
+
+    {% if logs %} {% for log in logs %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="card-title">{{ log.username_attempted }}</h6>
+            <p class="card-text">
+                {% if log.status == 'success' %}
+                <span class="badge bg-success">成功</span> {% else %}
+                <span class="badge bg-danger">失败</span> {% endif %} - IP: {{ log.ip_address }}
+            </p>
+            <small class="text-muted">{{ log.created_at|date:"Y-m-d H:i:s" }}</small>
+        </div>
+    </div>
+    {% endfor %} {% else %}
+    <div class="alert alert-info">
+        <h5>暂无登录日志</h5>
+        <p>当前没有找到任何登录记录。</p>
+    </div>
+    {% endif %} {% if page_obj.has_other_pages %}
+    <nav>
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">上一页</a>
+            </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">第 {{ page_obj.number }} 页</span>
+            </li>
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">下一页</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
