@@ -1,0 +1,208 @@
+{% extends "base.html" %} {% block title %}{{ page_title }} - AI智能体平台{% endblock %} {% block extra_css %}
+<style>
+    .info-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        margin-bottom: 10px;
+    }
+    
+    .stat-number {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #007bff;
+    }
+    
+    .user-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        margin-bottom: 15px;
+    }
+    
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 5px 10px;
+    }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-user"></i> {{ user_obj.username }} 的详细信息
+        </h1>
+        <a href="{% url 'authentication:user_management' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> 返回用户列表
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- 基本信息 -->
+        <div class="col-md-4">
+            <div class="info-card">
+                <div class="text-center">
+                    {% if user_obj.avatar %}
+                    <img src="{{ user_obj.avatar.url }}" alt="头像" class="user-avatar"> {% else %}
+                    <div class="user-avatar bg-secondary d-flex align-items-center justify-content-center mx-auto">
+                        <i class="fas fa-user text-white fa-2x"></i>
+                    </div>
+                    {% endif %}
+
+                    <h5 class="mb-2">{{ user_obj.username }}</h5>
+                    <p class="text-muted mb-3">{{ user_obj.email }}</p>
+
+                    {% if user_obj.is_active %}
+                    <span class="badge bg-success status-badge">激活</span> {% else %}
+                    <span class="badge bg-danger status-badge">禁用</span> {% endif %}
+
+                    <span class="badge bg-info status-badge">{{ user_obj.get_user_type_display }}</span>
+                </div>
+            </div>
+
+            <!-- 统计信息 -->
+            <div class="info-card">
+                <h6 class="mb-3"><i class="fas fa-chart-bar"></i> 使用统计</h6>
+                <div class="stat-item">
+                    <div class="stat-number">{{ stats.total_sessions }}</div>
+                    <small class="text-muted">总会话数</small>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ stats.total_messages }}</div>
+                    <small class="text-muted">总消息数</small>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ stats.recent_sessions }}</div>
+                    <small class="text-muted">近30天会话</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- 详细信息 -->
+        <div class="col-md-8">
+            <!-- 基本资料 -->
+            <div class="info-card">
+                <h6 class="mb-3"><i class="fas fa-info-circle"></i> 基本资料</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>用户名：</strong> {{ user_obj.username }}</p>
+                        <p><strong>邮箱：</strong> {{ user_obj.email }}</p>
+                        <p><strong>姓名：</strong> {{ user_obj.first_name }} {{ user_obj.last_name }}</p>
+                        <p><strong>用户类型：</strong> {{ user_obj.get_user_type_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>注册时间：</strong> {{ user_obj.date_joined|date:"Y-m-d H:i" }}</p>
+                        <p><strong>最后登录：</strong> {% if user_obj.last_login %} {{ user_obj.last_login|date:"Y-m-d H:i" }} {% else %} 从未登录 {% endif %}
+                        </p>
+                        <p><strong>账户状态：</strong> {% if user_obj.is_active %}
+                            <span class="text-success">激活</span> {% else %}
+                            <span class="text-danger">禁用</span> {% endif %}
+                        </p>
+                        <p><strong>手机号：</strong> {{ user_obj.phone|default:"未设置" }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 学生档案信息 -->
+            {% if student_profile %}
+            <div class="info-card">
+                <h6 class="mb-3"><i class="fas fa-graduation-cap"></i> 学生档案</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>学号：</strong> {{ student_profile.student_id }}</p>
+                        <p><strong>真实姓名：</strong> {{ student_profile.real_name }}</p>
+                        <p><strong>性别：</strong> {{ student_profile.get_gender_display|default:"未设置" }}</p>
+                        <p><strong>年级：</strong> {{ student_profile.grade|default:"未设置" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>专业：</strong> {{ student_profile.major|default:"未设置" }}</p>
+                        <p><strong>班级：</strong> {{ student_profile.class_name|default:"未设置" }}</p>
+                        <p><strong>入学年份：</strong> {{ student_profile.enrollment_year|default:"未设置" }}</p>
+                        <p><strong>毕业年份：</strong> {{ student_profile.graduation_year|default:"未设置" }}</p>
+                    </div>
+                </div>
+                {% if student_profile.notes %}
+                <div class="mt-3">
+                    <p><strong>备注：</strong></p>
+                    <p class="text-muted">{{ student_profile.notes }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- 权限信息 -->
+            {% if permissions %}
+            <div class="info-card">
+                <h6 class="mb-3"><i class="fas fa-key"></i> 功能权限</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>功能名称</th>
+                                <th>授权者</th>
+                                <th>授权时间</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for perm in permissions %}
+                            <tr>
+                                <td>{{ perm.function.name }}</td>
+                                <td>{{ perm.granted_by.username }}</td>
+                                <td>{{ perm.granted_at|date:"Y-m-d H:i" }}</td>
+                                <td>
+                                    {% if perm.is_active %}
+                                    <span class="badge bg-success">有效</span> {% else %}
+                                    <span class="badge bg-secondary">已撤销</span> {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 登录历史 -->
+            {% if login_history %}
+            <div class="info-card">
+                <h6 class="mb-3"><i class="fas fa-history"></i> 登录历史（最近20次）</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>登录时间</th>
+                                <th>IP地址</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in login_history %}
+                            <tr>
+                                <td>{{ log.login_time|date:"Y-m-d H:i:s" }}</td>
+                                <td>{{ log.ip_address }}</td>
+                                <td>
+                                    {% if log.login_status == 'success' %}
+                                    <span class="badge bg-success">成功</span> {% else %}
+                                    <span class="badge bg-danger">失败</span> {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

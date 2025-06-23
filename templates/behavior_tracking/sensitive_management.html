@@ -1,0 +1,272 @@
+{% extends 'base.html' %} {% load static %} {% block title %}敏感内容管理{% endblock %} {% block extra_css %}
+<style>
+    .management-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    
+    .sensitive-item {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .sensitive-item:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .severity-high {
+        border-left: 4px solid #dc3545;
+    }
+    
+    .severity-medium {
+        border-left: 4px solid #ffc107;
+    }
+    
+    .severity-low {
+        border-left: 4px solid #28a745;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-number {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #3498db;
+    }
+    
+    .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %} {% block content %} {% csrf_token %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">🚩 敏感内容管理</h1>
+        <a href="{% url 'behavior_tracking:dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> 返回仪表板
+        </a>
+    </div>
+
+    <!-- 统计概览 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_unreviewed }}</div>
+                <div class="stat-label">待审查</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ high_severity_count }}</div>
+                <div class="stat-label">高风险</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ detections_page.paginator.count }}</div>
+                <div class="stat-label">总检测数</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-number">{{ detections_page.number }}</div>
+                <div class="stat-label">当前页</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 筛选器 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="management-card">
+                <form method="get" class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label">检测类型</label>
+                        <select name="detection_type" class="form-select">
+                            <option value="">全部</option>
+                            {% for choice in detection_type_choices %}
+                            <option value="{{ choice.0 }}" {% if detection_type == choice.0 %}selected{% endif %}>
+                                {{ choice.1 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">严重程度</label>
+                        <select name="severity" class="form-select">
+                            <option value="">全部</option>
+                            {% for choice in severity_choices %}
+                            <option value="{{ choice.0 }}" {% if severity == choice.0 %}selected{% endif %}>
+                                {{ choice.1 }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">状态</label>
+                        <select name="status" class="form-select">
+                            <option value="">全部</option>
+                            <option value="unreviewed" {% if status == 'unreviewed' %}selected{% endif %}>待审查</option>
+                            <option value="reviewed" {% if status == 'reviewed' %}selected{% endif %}>已审查</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">搜索</label>
+                        <input type="text" name="search" class="form-control" placeholder="用户名或内容..." value="{{ search_query }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search"></i> 筛选
+                            </button>
+                            <a href="{% url 'behavior_tracking:sensitive_management' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> 清除
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 敏感内容列表 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="management-card">
+                <h5><i class="fas fa-list"></i> 检测记录</h5>
+                {% for detection in detections_page %}
+                <div class="sensitive-item severity-{{ detection.severity }}">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="mb-1">
+                                    <i class="fas fa-user"></i> {{ detection.message.session.user.username }}
+                                    <span class="badge bg-{{ detection.severity|default:'secondary' }} ms-2">
+                                        {{ detection.get_detection_type_display }}
+                                    </span>
+                                </h6>
+                                <small class="text-muted">{{ detection.created_at|date:"Y-m-d H:i:s" }}</small>
+                            </div>
+                            <p class="text-muted mb-2">{{ detection.context|truncatechars:200 }}</p>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-warning">{{ detection.get_severity_display }}</span> {% if detection.is_reviewed %}
+                                <span class="badge bg-success">已审查</span> {% else %}
+                                <span class="badge bg-danger">待审查</span> {% endif %} {% if detection.matched_words %}
+                                <small class="text-muted">匹配词: {{ detection.matched_words|join:", " }}</small> {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            {% if not detection.is_reviewed %}
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-success btn-sm" onclick="reviewSensitive({{ detection.id }}, 'approve', '内容正常')">
+                                    <i class="fas fa-check"></i> 通过
+                                </button>
+                                <button class="btn btn-warning btn-sm" onclick="reviewSensitive({{ detection.id }}, 'flag', '标记为敏感内容')">
+                                    <i class="fas fa-flag"></i> 标记
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="reviewSensitive({{ detection.id }}, 'escalate', '上报严重违规')">
+                                    <i class="fas fa-exclamation-triangle"></i> 上报
+                                </button>
+                            </div>
+                            {% else %}
+                            <div class="text-center">
+                                <i class="fas fa-check-circle text-success fa-2x"></i>
+                                <p class="text-muted small mt-2">
+                                    已由 {{ detection.reviewed_by.username }} 审查<br> {{ detection.reviewed_at|date:"m-d H:i" }}
+                                </p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-4">
+                    <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">暂无敏感内容检测记录</p>
+                </div>
+                {% endfor %}
+
+                <!-- 分页 -->
+                {% if detections_page.has_other_pages %}
+                <nav aria-label="敏感内容分页">
+                    <ul class="pagination justify-content-center mt-4">
+                        {% if detections_page.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ detections_page.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                上一页
+                            </a>
+                        </li>
+                        {% endif %} {% for num in detections_page.paginator.page_range %} {% if num == detections_page.number %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                {{ num }}
+                            </a>
+                        </li>
+                        {% endif %} {% endfor %} {% if detections_page.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ detections_page.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                下一页
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+    function reviewSensitive(detectionId, action, actionNote) {
+        if (confirm(`确定要${action === 'approve' ? '通过' : action === 'flag' ? '标记' : '上报'}这条内容吗？`)) {
+            // 获取CSRF token的安全方法
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]') ?
+                document.querySelector('[name=csrfmiddlewaretoken]').value :
+                '{{ csrf_token }}';
+
+            fetch('{% url "behavior_tracking:review_sensitive" %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        detection_id: detectionId,
+                        action: action,
+                        action_note: actionNote
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('操作失败：' + data.message);
+                    }
+                })
+                .catch(error => {
+                    alert('请求失败：' + error);
+                });
+        }
+    }
+</script>
+{% endblock %}
