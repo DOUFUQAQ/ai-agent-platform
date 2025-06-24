@@ -1,0 +1,262 @@
+{% extends 'base.html' %} {% block title %}首页 - AI Agent Platform{% endblock %} {% block content %}
+<div class="row">
+    <!-- 欢迎区域 -->
+    <div class="col-12 mb-5">
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <h1 class="display-4 fw-bold text-primary mb-3">
+                            <i class="fas fa-robot me-3"></i> AI Agent Platform
+                        </h1>
+                        <p class="lead text-muted mb-4">
+                            学校AI代理平台权限与管理系统<br> 集成DeepSeek + Agno智能体框架
+                        </p>
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'ai_agent:chat_interface' %}" class="btn btn-primary btn-lg me-3">
+                            <i class="fas fa-comments me-2"></i>DeepSeek对话
+                        </a>
+                        <a href="{% url 'ai_agent:agno_chat_page' %}" class="btn btn-success btn-lg me-3">
+                            <i class="fas fa-brain me-2"></i>Agno智能体
+                        </a>
+                        {% else %}
+                        <a href="{% url 'authentication:login' %}" class="btn btn-primary btn-lg me-3">
+                            <i class="fas fa-sign-in-alt me-2"></i>立即登录
+                        </a>
+                        {% endif %}
+                        <a href="#features" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-info-circle me-2"></i>了解更多
+                        </a>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="position-relative">
+                            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 300px; height: 300px;">
+                                <i class="fas fa-robot text-primary" style="font-size: 8rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 演示账户信息 -->
+    {% if not user.is_authenticated %}
+    <div class="col-12 mb-5">
+        <div class="demo-accounts">
+            <h3 class="text-center mb-4">
+                <i class="fas fa-users me-2"></i>演示账户
+            </h3>
+            <p class="text-center text-muted mb-4">您可以使用以下账户登录体验系统功能</p>
+
+            <div class="row">
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="demo-account-item text-center">
+                        <div class="text-danger mb-2">
+                            <i class="fas fa-user-shield" style="font-size: 2rem;"></i>
+                        </div>
+                        <h5 class="fw-bold">管理员</h5>
+                        <p class="mb-2">
+                            <strong>用户名:</strong> admin<br>
+                            <strong>密码:</strong> admin123
+                        </p>
+                        <small class="text-muted">完整管理权限</small>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="demo-account-item text-center">
+                        <div class="text-success mb-2">
+                            <i class="fas fa-chalkboard-teacher" style="font-size: 2rem;"></i>
+                        </div>
+                        <h5 class="fw-bold">教师</h5>
+                        <p class="mb-2">
+                            <strong>用户名:</strong> teacher<br>
+                            <strong>密码:</strong> teacher123
+                        </p>
+                        <small class="text-muted">教学管理权限</small>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="demo-account-item text-center">
+                        <div class="text-primary mb-2">
+                            <i class="fas fa-user-graduate" style="font-size: 2rem;"></i>
+                        </div>
+                        <h5 class="fw-bold">学生</h5>
+                        <p class="mb-2">
+                            <strong>用户名:</strong> student<br>
+                            <strong>密码:</strong> student123
+                        </p>
+                        <small class="text-muted">学习功能权限</small>
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="demo-account-item text-center">
+                        <div class="text-secondary mb-2">
+                            <i class="fas fa-user" style="font-size: 2rem;"></i>
+                        </div>
+                        <h5 class="fw-bold">访客</h5>
+                        <p class="mb-2">
+                            <strong>用户名:</strong> guest<br>
+                            <strong>密码:</strong> guest123
+                        </p>
+                        <small class="text-muted">基础访问权限</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 功能特色 -->
+    <div class="col-12 mb-5" id="features">
+        <h2 class="text-center mb-5">
+            <i class="fas fa-star me-2"></i>平台特色功能
+        </h2>
+
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <div class="text-primary mb-3">
+                            <i class="fas fa-robot" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title">AI智能对话</h5>
+                        <p class="card-text">
+                            双引擎AI支持：DeepSeek API提供7种专业助手， Agno智能体框架提供聊天、推理、教学三种智能体类型， 满足不同场景需求
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <div class="text-success mb-3">
+                            <i class="fas fa-brain" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title">Agno智能体</h5>
+                        <p class="card-text">
+                            基于OpenAI GPT模型的高级智能体框架， 支持推理思维链、多智能体协作、 长期记忆等先进AI功能
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <div class="text-warning mb-3">
+                            <i class="fas fa-users-cog" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title">权限管理</h5>
+                        <p class="card-text">
+                            完善的角色权限体系，支持管理员、教师、 学生、访客多种角色，精细化功能权限控制， 确保系统安全
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <div class="text-info mb-3">
+                            <i class="fas fa-chart-line" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title">行为追踪</h5>
+                        <p class="card-text">
+                            全面记录用户操作行为，支持交互记录分析， 登录日志管理，为系统优化和安全提供 数据支持
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <div class="text-danger mb-3">
+                            <i class="fas fa-user-graduate" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title">学生管理</h5>
+                        <p class="card-text">
+                            完整的学生信息管理系统，支持学生档案维护， 信息查询，为教育管理提供便利的 数据支持
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center">
+                        <div class="text-purple mb-3">
+                            <i class="fas fa-shield-alt" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="card-title">安全审计</h5>
+                        <p class="card-text">
+                            完善的日志记录和审计功能，实时监控系统 运行状态，确保平台安全稳定运行， 符合教育行业标准
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 技术栈 -->
+    <div class="col-12 mb-5">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="text-center mb-4">
+                    <i class="fas fa-code me-2"></i>技术栈
+                </h3>
+
+                <div class="row text-center">
+                    <div class="col-md-2 col-4 mb-3">
+                        <div class="p-3">
+                            <i class="fab fa-python text-primary" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0"><small>Django 5.2</small></p>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-4 mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-brain text-success" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0"><small>Agno 1.6.3</small></p>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-4 mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-robot text-info" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0"><small>OpenAI API</small></p>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-4 mb-3">
+                        <div class="p-3">
+                            <i class="fab fa-bootstrap text-purple" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0"><small>Bootstrap 5</small></p>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-4 mb-3">
+                        <div class="p-3">
+                            <i class="fab fa-js-square text-warning" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0"><small>JavaScript</small></p>
+                        </div>
+                    </div>
+                    <div class="col-md-2 col-4 mb-3">
+                        <div class="p-3">
+                            <i class="fas fa-database text-danger" style="font-size: 2rem;"></i>
+                            <p class="mt-2 mb-0"><small>SQLite</small></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .text-purple {
+        color: #6f42c1 !important;
+    }
+</style>
+{% endblock %}

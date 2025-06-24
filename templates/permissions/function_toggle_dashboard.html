@@ -1,0 +1,337 @@
+{% extends "base.html" %} {% load static %} {% block title %}{{ page_title }}{% endblock %} {% block extra_css %}
+<style>
+    .toggle-stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .toggle-stats-card h3 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    
+    .toggle-stats-card p {
+        margin: 5px 0 0 0;
+        opacity: 0.9;
+    }
+    
+    .function-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    
+    .toggle-log-item {
+        border-left: 4px solid #667eea;
+        padding-left: 15px;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+    }
+    
+    .toggle-log-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .log-time {
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    .gray-release-item {
+        border-left: 4px solid #f39c12;
+        background: #fff8e1;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        border-radius: 0 5px 5px 0;
+    }
+    
+    .operation-badge {
+        font-size: 0.75rem;
+        padding: 2px 6px;
+    }
+    
+    .progress-bar-custom {
+        height: 20px;
+        border-radius: 10px;
+    }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h1><i class="fas fa-toggle-on"></i> {{ page_title }}</h1>
+            <p class="text-muted">功能开关管理和灰度发布控制</p>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="toggle-stats-card">
+                <h3>{{ stats.total_functions }}</h3>
+                <p><i class="fas fa-cogs"></i> 总功能数</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="toggle-stats-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <h3>{{ stats.active_functions }}</h3>
+                <p><i class="fas fa-check-circle"></i> 活跃功能</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="toggle-stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <h3>{{ stats.beta_functions }}</h3>
+                <p><i class="fas fa-flask"></i> 测试功能</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="toggle-stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <h3>{{ stats.gray_releases }}</h3>
+                <p><i class="fas fa-rocket"></i> 灰度发布</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-3">
+            <div class="toggle-stats-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <h3>{{ stats.total_permissions }}</h3>
+                <p><i class="fas fa-user-shield"></i> 总权限数</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="toggle-stats-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                <h3>{{ stats.enabled_permissions }}</h3>
+                <p><i class="fas fa-unlock"></i> 已启用权限</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="toggle-stats-card" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+                <h3>{{ stats.group_permissions }}</h3>
+                <p><i class="fas fa-users-cog"></i> 群组权限</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="toggle-stats-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
+                <h3>{{ stats.total_toggles_today }}</h3>
+                <p><i class="fas fa-history"></i> 今日操作</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 快速操作 -->
+        <div class="col-md-4">
+            <div class="function-card">
+                <h5><i class="fas fa-bolt"></i> 快速操作</h5>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'permissions:function_permission_management' %}" class="btn btn-primary">
+                        <i class="fas fa-user-cog"></i> 权限管理
+                    </a>
+                    <a href="{% url 'permissions:function_management' %}" class="btn btn-info">
+                        <i class="fas fa-cogs"></i> 功能配置
+                    </a>
+                    <a href="{% url 'permissions:group_management' %}" class="btn btn-warning">
+                        <i class="fas fa-users"></i> 群组管理
+                    </a>
+                    <a href="#" class="btn btn-secondary">
+                        <i class="fas fa-chart-bar"></i> 数据分析
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 活跃的灰度发布 -->
+        <div class="col-md-8">
+            <div class="function-card">
+                <h5><i class="fas fa-rocket"></i> 活跃的灰度发布</h5>
+                {% for release in active_gray_releases %}
+                <div class="gray-release-item">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>{{ release.release_name }}</strong>
+                        <span class="badge bg-warning">{{ release.get_release_type_display }}</span>
+                    </div>
+                    <small>功能: {{ release.function.name }} | 创建者: {{ release.created_by.username }}</small>
+                    <div class="mt-2">
+                        <div class="progress">
+                            <div class="progress-bar bg-warning" role="progressbar" style="width: {{ release.current_percentage }}%" aria-valuenow="{{ release.current_percentage }}" aria-valuemin="0" aria-valuemax="100">
+                                {{ release.current_percentage }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted">当前没有活跃的灰度发布</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 最近的功能开关操作 -->
+        <div class="col-md-12">
+            <div class="function-card">
+                <h5><i class="fas fa-history"></i> 最近的功能开关操作</h5>
+                {% for toggle in recent_toggles %}
+                <div class="toggle-log-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ toggle.function.name }}</strong>
+                            <span class="badge operation-badge bg-primary">
+                                {{ toggle.get_operation_type_display }}
+                            </span>
+                            <br>
+                            <small>
+                                操作者: {{ toggle.operated_by.username }}
+                                {% if toggle.target_user %}
+                                | 目标用户: {{ toggle.target_user.username }}
+                                {% elif toggle.target_group %}
+                                | 目标群组: {{ toggle.target_group.name }}
+                                {% elif toggle.target_type == 'global' %}
+                                | 全局操作
+                                {% endif %}
+                                {% if toggle.reason %}
+                                | 原因: {{ toggle.reason }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        <span class="log-time">{{ toggle.operated_at|date:"m-d H:i" }}</span>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted">暂无功能开关操作记录</p>
+                {% endfor %}
+
+                <div class="text-center mt-3">
+                    <a href="#" class="btn btn-outline-primary btn-sm">
+                        查看全部日志 <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 创建灰度发布模态框 -->
+<div class="modal fade" id="createGrayReleaseModal" tabindex="-1" aria-labelledby="createGrayReleaseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createGrayReleaseModalLabel">
+                    <i class="fas fa-rocket"></i> 创建灰度发布
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createGrayReleaseForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="functionSelect" class="form-label">选择功能</label>
+                                <select class="form-select" id="functionSelect" name="function_id" required>
+                                    <option value="">请选择功能</option>
+                                    <!-- 这里需要从后端加载测试功能列表 -->
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="releaseName" class="form-label">发布名称</label>
+                                <input type="text" class="form-control" id="releaseName" name="release_name" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="releaseType" class="form-label">发布类型</label>
+                        <select class="form-select" id="releaseType" name="release_type" required>
+                            <option value="">请选择发布类型</option>
+                            <option value="percentage">按比例发布</option>
+                            <option value="whitelist">白名单发布</option>
+                            <option value="group_based">基于群组发布</option>
+                            <option value="gradual">逐步发布</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="percentageDiv" style="display: none;">
+                        <label for="targetPercentage" class="form-label">目标百分比</label>
+                        <input type="number" class="form-control" id="targetPercentage" name="target_percentage" min="0" max="100">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="createGrayRelease()">创建发布</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+    // 发布类型改变时显示/隐藏相关选项
+    document.getElementById('releaseType').addEventListener('change', function() {
+        const releaseType = this.value;
+        const percentageDiv = document.getElementById('percentageDiv');
+
+        if (releaseType === 'percentage' || releaseType === 'gradual') {
+            percentageDiv.style.display = 'block';
+        } else {
+            percentageDiv.style.display = 'none';
+        }
+    });
+
+    // 创建灰度发布
+    function createGrayRelease() {
+        const form = document.getElementById('createGrayReleaseForm');
+        const formData = new FormData(form);
+
+        const data = {
+            function_id: formData.get('function_id'),
+            release_name: formData.get('release_name'),
+            release_type: formData.get('release_type'),
+            target_percentage: parseInt(formData.get('target_percentage')) || 0,
+            target_groups: [],
+            whitelist_users: []
+        };
+
+        if (!data.function_id || !data.release_name || !data.release_type) {
+            alert('请填写所有必填字段');
+            return;
+        }
+
+        fetch('{% url "permissions:create_gray_release_api" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('错误: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('操作失败，请稍后重试');
+            });
+    }
+
+    // 自动刷新页面（每2分钟）
+    setTimeout(function() {
+        location.reload();
+    }, 120000);
+</script>
+{% endblock %}

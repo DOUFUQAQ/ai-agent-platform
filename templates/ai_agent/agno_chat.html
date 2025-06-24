@@ -1,0 +1,323 @@
+{% extends 'base.html' %} {% load static %} {% block title %}{{ page_title }}{% endblock %} {% block extra_css %}
+<style>
+    .agno-chat-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .agent-selector {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .agent-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+    
+    .agent-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .agent-card.active {
+        border-color: #007bff;
+        background: #e3f2fd;
+    }
+    
+    .chat-area {
+        height: 500px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        padding: 20px;
+        background: white;
+        margin-bottom: 20px;
+    }
+    
+    .message {
+        margin-bottom: 15px;
+        padding: 10px 15px;
+        border-radius: 10px;
+        max-width: 80%;
+    }
+    
+    .user-message {
+        background: #007bff;
+        color: white;
+        margin-left: auto;
+        text-align: right;
+    }
+    
+    .ai-message {
+        background: #f1f3f4;
+        color: #333;
+        margin-right: auto;
+    }
+    
+    .agno-badge {
+        background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        margin-left: 10px;
+    }
+    
+    .health-status {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 10px;
+        border-radius: 5px;
+        font-size: 0.9em;
+    }
+    
+    .health-healthy {
+        background: #d4edda;
+        color: #155724;
+    }
+    
+    .health-partial {
+        background: #fff3cd;
+        color: #856404;
+    }
+    
+    .health-error {
+        background: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %} {% block content %}
+<div class="agno-chat-container">
+    <h1>🤖 {{ page_title }} <span class="agno-badge">Powered by Agno</span></h1>
+
+    <!-- CSRF Token -->
+    {% csrf_token %} {% if not agno_available %}
+    <div class="alert alert-warning">
+        <h4>⚠️ Agno服务不可用</h4>
+        <p>Agno框架未正确配置。请检查OpenAI API密钥设置。</p>
+    </div>
+    {% else %}
+
+    <!-- 智能体选择器 -->
+    <div class="agent-selector">
+        <h3>🎯 选择智能体类型</h3>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="agent-card" data-agent="chat">
+                    <h5>💬 聊天助手</h5>
+                    <p>通用对话智能体，适合日常交流和问答</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="agent-card" data-agent="reasoning">
+                    <h5>🧠 推理专家</h5>
+                    <p>具有高级推理能力，适合复杂问题分析</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="agent-card" data-agent="tutor">
+                    <h5>👨‍🏫 学习导师</h5>
+                    <p>专业教学智能体，提供个性化学习指导</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 聊天区域 -->
+    <div class="chat-area" id="chatArea">
+        <div class="text-center text-muted">
+            <p>👋 欢迎使用Agno智能体平台！</p>
+            <p>请选择一个智能体类型开始对话</p>
+        </div>
+    </div>
+
+    <!-- 输入区域 -->
+    <div class="input-group">
+        <input type="text" class="form-control" id="messageInput" placeholder="请输入您的消息..." disabled>
+        <button class="btn btn-primary" id="sendButton" disabled>
+            <i class="fas fa-paper-plane"></i> 发送
+        </button>
+        <button class="btn btn-secondary" id="clearButton">
+            <i class="fas fa-trash"></i> 清空
+        </button>
+    </div>
+
+    {% endif %}
+</div>
+
+<!-- 健康状态指示器 -->
+<div id="healthStatus" class="health-status" style="display: none;"></div>
+{% endblock %} {% block extra_js %}
+<script>
+    let currentAgent = null;
+    let isLoading = false;
+
+    // 获取CSRF令牌
+    function getCsrfToken() {
+        return $('[name=csrfmiddlewaretoken]').val() || $('meta[name=csrf-token]').attr('content') || '{{ csrf_token }}';
+    }
+
+    $(document).ready(function() {
+        // 检查健康状态
+        checkHealth();
+
+        // 智能体选择
+        $('.agent-card').click(function() {
+            if (isLoading) return;
+
+            $('.agent-card').removeClass('active');
+            $(this).addClass('active');
+
+            currentAgent = $(this).data('agent');
+            $('#messageInput').prop('disabled', false);
+            $('#sendButton').prop('disabled', false);
+
+            // 清空聊天区域并显示欢迎消息
+            $('#chatArea').html(`
+            <div class="text-center text-muted">
+                <p>🤖 已选择：${getAgentName(currentAgent)}</p>
+                <p>开始对话吧！</p>
+            </div>
+        `);
+        });
+
+        // 发送消息
+        $('#sendButton').click(sendMessage);
+        $('#messageInput').keypress(function(e) {
+            if (e.which === 13 && !isLoading) {
+                sendMessage();
+            }
+        });
+
+        // 清空聊天
+        $('#clearButton').click(function() {
+            if (currentAgent) {
+                $('#chatArea').html(`
+                <div class="text-center text-muted">
+                    <p>🤖 已选择：${getAgentName(currentAgent)}</p>
+                    <p>开始对话吧！</p>
+                </div>
+            `);
+            }
+        });
+    });
+
+    function getAgentName(agent) {
+        const names = {
+            'chat': '💬 聊天助手',
+            'reasoning': '🧠 推理专家',
+            'tutor': '👨‍🏫 学习导师'
+        };
+        return names[agent] || agent;
+    }
+
+    function sendMessage() {
+        if (!currentAgent || isLoading) return;
+
+        const message = $('#messageInput').val().trim();
+        if (!message) return;
+
+        // 显示用户消息
+        addMessage(message, 'user');
+        $('#messageInput').val('');
+
+        // 显示加载状态
+        isLoading = true;
+        $('#sendButton').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> 处理中...');
+
+        // 获取CSRF令牌
+        const csrfToken = getCsrfToken();
+        console.log('CSRF Token:', csrfToken); // 调试用
+
+        // 发送到后端
+        $.ajax({
+            url: '{% url "ai_agent:agno_chat_api" %}',
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify({
+                message: message,
+                agent_type: currentAgent
+            }),
+            success: function(response) {
+                console.log('API Response:', response); // 调试用
+                if (response.success) {
+                    addMessage(response.response, 'ai', response.agent_type);
+                } else {
+                    addMessage('抱歉，处理您的请求时出现错误：' + response.error, 'error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', xhr, status, error); // 调试用
+                let errorMsg = '网络错误';
+                if (xhr.responseJSON && xhr.responseJSON.error) {
+                    errorMsg = xhr.responseJSON.error;
+                } else if (xhr.responseText) {
+                    errorMsg = xhr.responseText;
+                }
+                addMessage('抱歉，发生了错误：' + errorMsg, 'error');
+            },
+            complete: function() {
+                isLoading = false;
+                $('#sendButton').prop('disabled', false).html('<i class="fas fa-paper-plane"></i> 发送');
+            }
+        });
+    }
+
+    function addMessage(content, type, agentType = null) {
+        const chatArea = $('#chatArea');
+        const messageClass = type === 'user' ? 'user-message' : (type === 'error' ? 'ai-message' : 'ai-message');
+
+        if (chatArea.find('.text-muted').length) {
+            chatArea.empty();
+        }
+
+        let badge = '';
+        if (type === 'ai' && agentType) {
+            badge = `<span class="agno-badge">${getAgentName(agentType)}</span>`;
+        } else if (type === 'error') {
+            badge = `<span class="agno-badge" style="background: #dc3545;">错误</span>`;
+        }
+
+        const messageHtml = `
+        <div class="message ${messageClass}">
+            ${content} ${badge}
+        </div>
+    `;
+
+        chatArea.append(messageHtml);
+        chatArea.scrollTop(chatArea[0].scrollHeight);
+    }
+
+    function checkHealth() {
+        $.get('{% url "ai_agent:agno_health_check" %}', function(response) {
+            console.log('Health Check Response:', response); // 调试用
+            const status = $('#healthStatus');
+            if (response.success) {
+                const healthClass = 'health-' + response.status;
+                status.removeClass().addClass('health-status ' + healthClass);
+                status.text(`Agno状态: ${response.status}`);
+                status.show();
+            }
+        }).fail(function(xhr) {
+            console.error('Health Check Failed:', xhr); // 调试用
+            const status = $('#healthStatus');
+            status.removeClass().addClass('health-status health-error');
+            status.text('Agno状态: 连接失败');
+            status.show();
+        });
+    }
+</script>
+{% endblock %}
