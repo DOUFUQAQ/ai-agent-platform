@@ -1,0 +1,250 @@
+{% extends 'base.html' %} {% load static %} {% block title %}标签管理{% endblock %} {% block extra_css %}
+<style>
+    .tag-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .tag-card:hover {
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .tag-preview {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 20px;
+        color: white;
+        font-weight: 500;
+        margin-right: 10px;
+    }
+    
+    .color-picker {
+        width: 40px;
+        height: 40px;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+    
+    .new-tag-form {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .tag-usage-count {
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">标签管理</h1>
+                <div class="btn-group">
+                    <a href="{% url 'student_management:dashboard' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>返回仪表板
+                    </a>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTagModal">
+                        <i class="fas fa-plus me-2"></i>添加标签
+                    </button>
+                </div>
+            </div>
+
+            <!-- 新增标签表单 -->
+            <div class="new-tag-form">
+                <h5 class="mb-3">快速添加标签</h5>
+                <form method="post" action="{% url 'student_management:create_tag' %}" class="row g-3">
+                    {% csrf_token %}
+                    <div class="col-md-4">
+                        <label for="tag_name" class="form-label">标签名称</label>
+                        <input type="text" class="form-control" id="tag_name" name="name" placeholder="输入标签名称" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="tag_color" class="form-label">标签颜色</label>
+                        <input type="color" class="form-control color-picker" id="tag_color" name="color" value="#007bff">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="tag_description" class="form-label">描述</label>
+                        <input type="text" class="form-control" id="tag_description" name="description" placeholder="标签描述（可选）">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>添加
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 标签统计 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-tags fa-2x me-3"></i>
+                                <div>
+                                    <h4 class="mb-0">{{ total_tags }}</h4>
+                                    <small>总标签数</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-user-tag fa-2x me-3"></i>
+                                <div>
+                                    <h4 class="mb-0">{{ used_tags }}</h4>
+                                    <small>已使用标签</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 标签列表 -->
+            <div class="row">
+                {% for tag in tags %}
+                <div class="col-lg-6 col-xl-4 mb-3">
+                    <div class="tag-card">
+                        <div class="d-flex align-items-center justify-content-between mb-3">
+                            <div class="d-flex align-items-center">
+                                <span class="tag-preview" style="background-color: {{ tag.color|default:'#007bff' }};">
+                                    {{ tag.name }}
+                                </span>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="editTag({{ tag.id }}, '{{ tag.name }}', '{{ tag.color }}', '{{ tag.description }}')">
+                                            <i class="fas fa-edit me-2"></i>编辑
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="#" onclick="deleteTag({{ tag.id }}, '{{ tag.name }}')">
+                                            <i class="fas fa-trash me-2"></i>删除
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        {% if tag.description %}
+                        <p class="text-muted mb-2">{{ tag.description }}</p>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="tag-usage-count">
+                                <i class="fas fa-users me-1"></i>
+                                使用人数: {{ tag.usage_count|default:0 }}
+                            </span>
+                            <small class="text-muted">
+                                创建于: {{ tag.created_at|date:"m-d" }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <i class="fas fa-tags fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">暂无标签数据</p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTagModal">
+                            <i class="fas fa-plus me-2"></i>创建第一个标签
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑标签模态框 -->
+<div class="modal fade" id="editTagModal" tabindex="-1" aria-labelledby="editTagModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editTagModalLabel">编辑标签</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editTagForm" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_tag_name" class="form-label">标签名称</label>
+                        <input type="text" class="form-control" id="edit_tag_name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_tag_color" class="form-label">标签颜色</label>
+                        <input type="color" class="form-control color-picker" id="edit_tag_color" name="color">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_tag_description" class="form-label">描述</label>
+                        <input type="text" class="form-control" id="edit_tag_description" name="description" placeholder="标签描述（可选）">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存更改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+    function editTag(tagId, name, color, description) {
+        document.getElementById('edit_tag_name').value = name;
+        document.getElementById('edit_tag_color').value = color || '#007bff';
+        document.getElementById('edit_tag_description').value = description || '';
+
+        const form = document.getElementById('editTagForm');
+        form.action = `/students/tags/${tagId}/update/`;
+
+        const modal = new bootstrap.Modal(document.getElementById('editTagModal'));
+        modal.show();
+    }
+
+    function deleteTag(tagId, name) {
+        if (confirm(`确定要删除标签 "${name}" 吗？此操作不可撤销。`)) {
+            fetch(`/students/tags/${tagId}/delete/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('删除失败: ' + (data.error || '未知错误'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('删除失败，请重试');
+                });
+        }
+    }
+</script>
+{% endblock %}

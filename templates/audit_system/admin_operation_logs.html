@@ -1,0 +1,182 @@
+{% extends 'base.html' %} {% load static %} {% block title %}{{ page_title }}{% endblock %} {% block extra_css %}
+<style>
+    .operation-item {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-left: 4px solid #007bff;
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .operation-item:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .operation-item.critical {
+        border-left-color: #dc3545;
+    }
+    
+    .operation-item.warning {
+        border-left-color: #ffc107;
+    }
+    
+    .operation-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .operation-user {
+        font-weight: bold;
+        color: #007bff;
+    }
+    
+    .operation-time {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .operation-details {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+        font-size: 0.9rem;
+    }
+    
+    .stats-summary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="fas fa-cogs"></i> {{ page_title }}</h1>
+        <a href="{% url 'audit_system:dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> 返回仪表板
+        </a>
+    </div>
+
+    <!-- 统计概览 -->
+    {% if page_obj %}
+    <div class="stats-summary">
+        <div class="row">
+            <div class="col-md-3">
+                <h5 class="mb-1">{{ page_obj.paginator.count }}</h5>
+                <small>总操作记录</small>
+            </div>
+            <div class="col-md-3">
+                <h5 class="mb-1">{{ page_obj.number }}</h5>
+                <small>当前页</small>
+            </div>
+            <div class="col-md-3">
+                <h5 class="mb-1">{{ page_obj.paginator.num_pages }}</h5>
+                <small>总页数</small>
+            </div>
+            <div class="col-md-3">
+                <h5 class="mb-1">20</h5>
+                <small>每页显示</small>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 操作日志列表 -->
+    <div class="row">
+        <div class="col-12">
+            {% if logs %} {% for log in logs %}
+            <div class="operation-item">
+                <div class="operation-header">
+                    <div class="d-flex align-items-center">
+                        <span class="operation-user me-2">{{ log.admin_user.username }}</span>
+                        <span class="badge bg-primary me-2">{{ log.get_operation_display }}</span> {% if log.target_user %}
+                        <span class="badge bg-info">目标用户: {{ log.target_user.username }}</span> {% endif %}
+                    </div>
+                    <span class="operation-time">
+                            <i class="fas fa-clock me-1"></i>
+                            {{ log.created_at|date:"m-d H:i" }}
+                        </span>
+                </div>
+                <div class="operation-description">
+                    {{ log.details }}
+                </div>
+                {% if log.old_value or log.new_value %}
+                <div class="operation-details">
+                    {% if log.old_value %}
+                    <div><strong>原值：</strong>{{ log.old_value }}</div>
+                    {% endif %} {% if log.new_value %}
+                    <div><strong>新值：</strong>{{ log.new_value }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %} {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-cogs fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">暂无管理员操作记录</h5>
+                <p class="text-muted">当前没有管理员操作日志</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 分页 -->
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="操作日志分页" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                    <i class="fas fa-chevron-left me-1"></i>上一页
+                </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">
+                    <i class="fas fa-chevron-left me-1"></i>上一页
+                </span>
+            </li>
+            {% endif %} {% for num in page_obj.paginator.page_range %} {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num
+            < page_obj.number|add: '3' %} <li class="page-item">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+                {% endif %} {% endfor %} {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                    下一页<i class="fas fa-chevron-right ms-1"></i>
+                </a>
+                </li>
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">
+                    下一页<i class="fas fa-chevron-right ms-1"></i>
+                </span>
+                </li>
+                {% endif %}
+        </ul>
+
+        <div class="text-center mt-2">
+            <small class="text-muted">
+                显示第 {{ page_obj.start_index }} - {{ page_obj.end_index }} 条，共 {{ page_obj.paginator.count }} 条记录
+            </small>
+        </div>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+    // 操作日志相关功能
+    console.log('管理员操作日志页面已加载');
+</script>
+{% endblock %}
