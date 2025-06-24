@@ -1,0 +1,262 @@
+{% extends 'base.html' %} {% load static %} {% block title %}用户行为分析{% endblock %} {% block extra_css %}
+<style>
+    .user-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+    }
+    
+    .user-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .user-avatar {
+        width: 50px;
+        height: 50px;
+        background: #3498db;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.2rem;
+    }
+    
+    .stats-row {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 15px;
+    }
+    
+    .stat-item {
+        text-align: center;
+        flex: 1;
+    }
+    
+    .stat-number {
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #2c3e50;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        color: #7f8c8d;
+        margin-top: 2px;
+    }
+    
+    .user-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+    }
+    
+    .alert-indicator {
+        width: 12px;
+        height: 12px;
+        background: #e74c3c;
+        border-radius: 50%;
+        display: inline-block;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.5;
+        }
+        100% {
+            opacity: 1;
+        }
+    }
+    
+    .search-box {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">👥 用户行为分析</h1>
+        <div class="btn-group">
+            <a href="{% url 'behavior_tracking:dashboard' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left"></i> 返回仪表板
+            </a>
+            <a href="{% url 'behavior_tracking:function_analytics' %}" class="btn btn-info">
+                <i class="fas fa-chart-line"></i> 功能分析
+            </a>
+        </div>
+    </div>
+
+    <!-- 搜索和筛选 -->
+    <div class="search-box">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">搜索用户</label>
+                <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="用户名、姓名...">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">用户类型</label>
+                <select class="form-select" name="user_type">
+                    <option value="">全部类型</option>
+                    {% for key, value in user_type_choices %}
+                    <option value="{{ key }}" {% if user_type_filter == key %}selected{% endif %}>{{ value }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">统计周期</label>
+                <select class="form-select" name="period">
+                    <option value="week" {% if period == 'week' %}selected{% endif %}>最近一周</option>
+                    <option value="month" {% if period == 'month' %}selected{% endif %}>最近一月</option>
+                    <option value="year" {% if period == 'year' %}selected{% endif %}>最近一年</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> 搜索
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- 用户列表 -->
+    <div class="row">
+        {% for user_data in users_with_stats %}
+        <div class="col-md-6 col-lg-4">
+            <div class="user-card">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="user-avatar">
+                        {{ user_data.user.username|first|upper }}
+                    </div>
+                    <div class="ms-3 flex-grow-1">
+                        <div class="d-flex align-items-center">
+                            <h6 class="mb-0">{{ user_data.user.username }}</h6>
+                            {% if user_data.has_abnormal %}
+                            <span class="alert-indicator ms-2" title="有未处理的异常行为"></span> {% endif %}
+                        </div>
+                        <span class="user-badge bg-primary">{{ user_data.user.get_user_type_display }}</span> {% if user_data.last_active %}
+                        <div class="text-muted small mt-1">
+                            最后活跃: {{ user_data.last_active|date:"m-d H:i" }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="stats-row">
+                    <div class="stat-item">
+                        <div class="stat-number">{{ user_data.stats.total_sessions }}</div>
+                        <div class="stat-label">会话数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ user_data.stats.total_messages }}</div>
+                        <div class="stat-label">消息数</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">{{ user_data.stats.avg_duration_minutes|floatformat:1 }}</div>
+                        <div class="stat-label">平均时长(分钟)</div>
+                    </div>
+                </div>
+
+                <div class="mt-3 text-center">
+                    <a href="{% url 'behavior_tracking:user_detail' user_data.user.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-eye"></i> 查看详情
+                    </a>
+                    {% if user_data.has_abnormal %}
+                    <a href="{% url 'behavior_tracking:abnormal_management' %}?search={{ user_data.user.username }}" class="btn btn-outline-warning btn-sm">
+                        <i class="fas fa-exclamation-triangle"></i> 异常行为
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-users text-muted" style="font-size: 3rem;"></i>
+                <h5 class="text-muted mt-3">暂无用户数据</h5>
+                <p class="text-muted">没有找到符合条件的用户行为记录</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 分页 -->
+    {% if users_page.has_other_pages %}
+    <nav aria-label="用户列表分页">
+        <ul class="pagination justify-content-center">
+            {% if users_page.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ users_page.previous_page_number }}&search={{ search_query }}&user_type={{ user_type_filter }}&period={{ period }}">
+                    上一页
+                </a>
+            </li>
+            {% endif %} {% for num in users_page.paginator.page_range %} {% if users_page.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > users_page.number|add:'-3' and num
+            < users_page.number|add: '3' %} <li class="page-item">
+                <a class="page-link" href="?page={{ num }}&search={{ search_query }}&user_type={{ user_type_filter }}&period={{ period }}">{{ num }}</a>
+                </li>
+                {% endif %} {% endfor %} {% if users_page.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ users_page.next_page_number }}&search={{ search_query }}&user_type={{ user_type_filter }}&period={{ period }}">
+                    下一页
+                </a>
+                </li>
+                {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    <!-- 汇总统计 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="search-box">
+                <h6><i class="fas fa-info-circle"></i> 统计汇总</h6>
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="stat-number">{{ users_page.paginator.count }}</div>
+                        <div class="stat-label">活跃用户总数</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-number">{{ users_with_stats|length }}</div>
+                        <div class="stat-label">当前页用户数</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-number">{{ period }}</div>
+                        <div class="stat-label">统计周期</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-number">
+                            {% for user_data in users_with_stats %} {% if user_data.has_abnormal %}1{% endif %} {% endfor %}
+                        </div>
+                        <div class="stat-label">有异常行为用户</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+    // 自动刷新页面 (可选)
+    // setInterval(() => {
+    //     location.reload();
+    // }, 300000); // 5分钟刷新一次
+</script>
+{% endblock %}

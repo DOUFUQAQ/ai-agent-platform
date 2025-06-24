@@ -1,0 +1,331 @@
+{% extends 'base.html' %} {% block title %}功能管理 - AI Agent Platform{% endblock %} {% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-cogs me-2"></i>AI功能管理</h2>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addFunctionModal">
+                    <i class="fas fa-plus me-2"></i>添加功能
+                </button>
+            </div>
+
+            <!-- 功能统计 -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-cogs fa-2x me-3"></i>
+                                <div>
+                                    <h4 class="mb-0">{{ total_functions|default:0 }}</h4>
+                                    <small>总功能数</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-toggle-on fa-2x me-3"></i>
+                                <div>
+                                    <h4 class="mb-0">{{ active_functions|default:0 }}</h4>
+                                    <small>已启用</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-users fa-2x me-3"></i>
+                                <div>
+                                    <h4 class="mb-0">{{ total_permissions|default:0 }}</h4>
+                                    <small>权限分配</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-chart-line fa-2x me-3"></i>
+                                <div>
+                                    <h4 class="mb-0">{{ usage_rate|default:0 }}%</h4>
+                                    <small>使用率</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 功能列表 -->
+            <div class="card">
+                <div class="card-header">
+                    <h5>AI功能列表</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>功能名称</th>
+                                    <th>功能代码</th>
+                                    <th>类型</th>
+                                    <th>描述</th>
+                                    <th>权限用户</th>
+                                    <th>使用次数</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for function in functions %}
+                                <tr>
+                                    <td>{{ function.id }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-cog fa-lg me-2 text-primary"></i>
+                                            <strong>{{ function.name }}</strong>
+                                        </div>
+                                    </td>
+                                    <td><code>{{ function.function_code }}</code></td>
+                                    <td>
+                                        {% if function.function_type == 'qa' %}
+                                        <span class="badge bg-info">通用问答</span> {% elif function.function_type == 'course_selection' %}
+                                        <span class="badge bg-success">选课助手</span> {% elif function.function_type == 'calendar' %}
+                                        <span class="badge bg-warning">日历助手</span> {% elif function.function_type == 'email' %}
+                                        <span class="badge bg-danger">邮件助手</span> {% else %}
+                                        <span class="badge bg-secondary">{{ function.get_function_type_display }}</span> {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="text-muted">{{ function.description|truncatechars:50 }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ function.permission_count|default:0 }} 人</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ function.usage_count|default:0 }} 次</span>
+                                    </td>
+                                    <td>
+                                        {% if function.is_active %}
+                                        <span class="badge bg-success">启用</span> {% else %}
+                                        <span class="badge bg-secondary">禁用</span> {% endif %} {% if function.is_beta %}
+                                        <span class="badge bg-warning">测试</span> {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="editFunction({{ function.id }}, '{{ function.name|escapejs }}', '{{ function.function_code|escapejs }}', '{{ function.function_type }}', '{{ function.description|escapejs }}', {{ function.is_active|yesno:'true,false' }}, {{ function.is_beta|yesno:'true,false' }}, {{ function.max_daily_usage }})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="toggleFunctionStatus({{ function.id }}, {{ function.is_active|yesno:'true,false' }})">
+                                                {% if function.is_active %}
+                                                    <i class="fas fa-toggle-off"></i>
+                                                {% else %}
+                                                    <i class="fas fa-toggle-on"></i>
+                                                {% endif %}
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-info" onclick="viewFunctionPermissions({{ function.id }})">
+                                                <i class="fas fa-users"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteFunction({{ function.id }})">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted">
+                                        <i class="fas fa-cogs fa-3x mb-3"></i>
+                                        <p>没有找到AI功能</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑功能模态框 -->
+<div class="modal fade" id="editFunctionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">编辑功能</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editFunctionForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <input type="hidden" id="edit_function_id" name="function_id">
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label">功能名称</label>
+                        <input type="text" class="form-control" id="edit_name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_function_code" class="form-label">功能代码</label>
+                        <input type="text" class="form-control" id="edit_function_code" name="function_code" required>
+                        <div class="form-text">用于系统内部识别的唯一代码</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_function_type" class="form-label">功能类型</label>
+                        <select class="form-select" id="edit_function_type" name="function_type" required>
+                            <option value="qa">通用问答</option>
+                            <option value="course_selection">选课助手</option>
+                            <option value="calendar">日历助手</option>
+                            <option value="email">邮件助手</option>
+                            <option value="study_plan">学业规划</option>
+                            <option value="document">文档助手</option>
+                            <option value="translation">翻译助手</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_description" class="form-label">功能描述</label>
+                        <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_max_daily_usage" class="form-label">每日最大使用次数</label>
+                        <input type="number" class="form-control" id="edit_max_daily_usage" name="max_daily_usage" value="0" min="0">
+                        <div class="form-text">0表示无限制</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="edit_is_active" name="is_active">
+                            <label class="form-check-label" for="edit_is_active">
+                                启用该功能
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="edit_is_beta" name="is_beta">
+                            <label class="form-check-label" for="edit_is_beta">
+                                标记为测试功能
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存更改</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% csrf_token %}
+
+<script>
+    function toggleFunctionStatus(functionId, currentStatus) {
+        if (confirm('确定要' + (currentStatus ? '禁用' : '启用') + '该功能吗？')) {
+            fetch(`/permissions/functions/${functionId}/toggle/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('操作失败：' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('操作失败：' + error);
+                });
+        }
+    }
+
+    function editFunction(id, name, functionCode, functionType, description, isActive, isBeta, maxDailyUsage) {
+        // 填充编辑表单
+        document.getElementById('edit_function_id').value = id;
+        document.getElementById('edit_name').value = name;
+        document.getElementById('edit_function_code').value = functionCode;
+        document.getElementById('edit_function_type').value = functionType;
+        document.getElementById('edit_description').value = description || '';
+        document.getElementById('edit_max_daily_usage').value = maxDailyUsage;
+        document.getElementById('edit_is_active').checked = isActive;
+        document.getElementById('edit_is_beta').checked = isBeta;
+
+        // 显示模态框
+        const modal = new bootstrap.Modal(document.getElementById('editFunctionModal'));
+        modal.show();
+    }
+
+    function viewFunctionPermissions(functionId) {
+        window.location.href = `/permissions/functions/${functionId}/permissions/`;
+    }
+
+    function deleteFunction(functionId) {
+        if (confirm('确定要删除该功能吗？此操作不可恢复！')) {
+            fetch(`/permissions/functions/${functionId}/delete/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('删除失败：' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('删除失败：' + error);
+                });
+        }
+    }
+
+    // 编辑功能表单提交
+    document.getElementById('editFunctionForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+        data.is_active = document.getElementById('edit_is_active').checked;
+        data.is_beta = document.getElementById('edit_is_beta').checked;
+
+        const functionId = document.getElementById('edit_function_id').value;
+
+        fetch(`/permissions/functions/${functionId}/update/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('更新成功！');
+                    location.reload();
+                } else {
+                    alert('更新失败：' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('更新失败：' + error);
+            });
+    });
+</script>
+{% endblock %}

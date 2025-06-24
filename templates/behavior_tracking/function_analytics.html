@@ -1,0 +1,232 @@
+{% extends 'base.html' %} {% load static %} {% block title %}功能使用分析{% endblock %} {% block extra_css %}
+<style>
+    .analytics-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    
+    .function-card {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .function-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .stat-item {
+        text-align: center;
+        margin: 10px 0;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #3498db;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #666;
+    }
+    
+    .usage-bar {
+        width: 100%;
+        height: 10px;
+        background-color: #e9ecef;
+        border-radius: 5px;
+        overflow: hidden;
+        margin: 10px 0;
+    }
+    
+    .usage-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #3498db, #2ecc71);
+        transition: width 0.3s ease;
+    }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">📈 功能使用分析</h1>
+        <div class="d-flex align-items-center gap-3">
+            <select class="form-select" onchange="changePeriod(this.value)">
+                <option value="7" {% if period == '7' %}selected{% endif %}>最近7天</option>
+                <option value="30" {% if period == '30' %}selected{% endif %}>最近30天</option>
+                <option value="90" {% if period == '90' %}selected{% endif %}>最近90天</option>
+            </select>
+            <a href="{% url 'behavior_tracking:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> 返回仪表板
+            </a>
+        </div>
+    </div>
+
+    <!-- 概览统计 -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="analytics-card text-center">
+                <div class="stat-number">{{ function_stats.total_functions }}</div>
+                <div class="stat-label">活跃功能数</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="analytics-card text-center">
+                <div class="stat-number">{{ activity_stats.total_sessions }}</div>
+                <div class="stat-label">总会话数</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="analytics-card text-center">
+                <div class="stat-number">{{ activity_stats.total_users }}</div>
+                <div class="stat-label">活跃用户数</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="analytics-card text-center">
+                <div class="stat-number">{{ activity_stats.total_messages }}</div>
+                <div class="stat-label">总消息数</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 功能使用排行 -->
+        <div class="col-md-8">
+            <div class="analytics-card">
+                <h5><i class="fas fa-chart-bar"></i> 功能使用排行</h5>
+                <div class="mt-3">
+                    {% for func in function_stats.functions %}
+                    <div class="function-card">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ func.function_name }}</h6>
+                                <small class="text-muted">{{ func.function_code }}</small>
+                                <div class="usage-bar">
+                                    <div class="usage-fill" style="width: {{ func.usage_rate }}%"></div>
+                                </div>
+                                <div class="row text-center mt-2">
+                                    <div class="col-3">
+                                        <div class="stat-item">
+                                            <div class="stat-number">{{ func.call_count }}</div>
+                                            <div class="stat-label">调用次数</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="stat-item">
+                                            <div class="stat-number">{{ func.unique_users }}</div>
+                                            <div class="stat-label">用户数</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="stat-item">
+                                            <div class="stat-number">{{ func.total_messages }}</div>
+                                            <div class="stat-label">消息数</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="stat-item">
+                                            <div class="stat-number">{{ func.avg_duration_minutes }}</div>
+                                            <div class="stat-label">平均时长(分)</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">{{ func.usage_rate }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-bar fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">暂无功能使用数据</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 使用趋势图 -->
+        <div class="col-md-4">
+            <div class="analytics-card">
+                <h5><i class="fas fa-chart-line"></i> 使用趋势</h5>
+                <canvas id="trendChart" width="400" height="300"></canvas>
+            </div>
+
+            <!-- 快速操作 -->
+            <div class="analytics-card mt-3">
+                <h6><i class="fas fa-tools"></i> 快速操作</h6>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="exportAnalytics()">
+                        <i class="fas fa-download"></i> 导出分析报告
+                    </button>
+                    <button class="btn btn-outline-info" onclick="refreshData()">
+                        <i class="fas fa-sync"></i> 刷新数据
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 使用趋势图
+    const trendData = {
+        {
+            activity_trend | safe
+        }
+    };
+    const ctx = document.getElementById('trendChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: trendData.map(d => d.date.substring(5)),
+            datasets: [{
+                label: '每日会话数',
+                data: trendData.map(d => d.sessions),
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // 切换时间范围
+    function changePeriod(period) {
+        window.location.href = `?period=${period}`;
+    }
+
+    // 导出分析报告
+    function exportAnalytics() {
+        window.location.href = '{% url "behavior_tracking:export_data" %}';
+    }
+
+    // 刷新数据
+    function refreshData() {
+        location.reload();
+    }
+</script>
+{% endblock %}

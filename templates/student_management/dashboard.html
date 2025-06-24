@@ -1,0 +1,320 @@
+{% extends 'base.html' %} {% load static %} {% block title %}{{ page_title }}{% endblock %} {% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stats-card.students {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .stats-card.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .stats-card.new {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .stats-card.tags {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .stats-card.notes {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+    
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .stats-label {
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+    }
+    
+    .student-card {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .student-card:hover {
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .student-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+    }
+    
+    .tag-item {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        color: white;
+        margin: 2px;
+    }
+    
+    .quick-action-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0">{{ page_title }}</h1>
+            <p class="text-muted">学生信息管理与分析概览</p>
+        </div>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="row mb-4">
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card students">
+                <div class="stats-number">{{ stats.students.total }}</div>
+                <div class="stats-label">总学生数</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card active">
+                <div class="stats-number">{{ stats.students.active }}</div>
+                <div class="stats-label">活跃学生</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card new">
+                <div class="stats-number">{{ stats.students.new_week }}</div>
+                <div class="stats-label">本周新增</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card tags">
+                <div class="stats-number">{{ stats.tags.tagged_students }}</div>
+                <div class="stats-label">已标记学生</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card notes">
+                <div class="stats-number">{{ stats.notes.total }}</div>
+                <div class="stats-label">总备注数</div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+            <div class="stats-card students">
+                <div class="stats-number">{{ stats.students.active_today }}</div>
+                <div class="stats-label">今日活跃</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- 活跃度趋势图表 -->
+        <div class="col-lg-8 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-line text-primary me-2"></i> 学生活跃度趋势 (近30天)
+                </h5>
+                <canvas id="activityChart" height="300"></canvas>
+            </div>
+        </div>
+
+        <!-- 快速操作 -->
+        <div class="col-lg-4 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-bolt text-warning me-2"></i> 快速操作
+                </h5>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'student_management:students_list' %}" class="btn quick-action-btn">
+                        <i class="fas fa-users me-2"></i>学生列表管理
+                    </a>
+                    <a href="{% url 'student_management:tags_management' %}" class="btn quick-action-btn">
+                        <i class="fas fa-tags me-2"></i>标签管理
+                    </a>
+                    <button class="btn quick-action-btn" onclick="exportAllData()">
+                        <i class="fas fa-download me-2"></i>导出数据
+                    </button>
+                    <button class="btn quick-action-btn" onclick="showStatistics()">
+                        <i class="fas fa-chart-bar me-2"></i>详细统计
+                    </button>
+                </div>
+            </div>
+
+            <!-- 常用标签 -->
+            <div class="chart-container mt-3">
+                <h6 class="mb-3">
+                    <i class="fas fa-tag text-info me-2"></i> 常用标签
+                </h6>
+                {% for tag in popular_tags %}
+                <span class="tag-item" style="background-color: {{ tag.color }};">
+                    {{ tag.name }}
+                    <span class="badge badge-light ms-1">{{ tag.usage_count }}</span>
+                </span>
+                {% empty %}
+                <p class="text-muted">暂无标签</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 最近活跃学生 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-container">
+                <h5 class="mb-3">
+                    <i class="fas fa-user-clock text-success me-2"></i> 最近活跃学生
+                </h5>
+                <div class="row">
+                    {% for student in recent_students %}
+                    <div class="col-lg-6 col-xl-4 mb-3">
+                        <div class="student-card">
+                            <div class="d-flex align-items-center">
+                                <div class="student-avatar me-3">
+                                    {{ student.username|first|upper }}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">
+                                        <a href="{% url 'student_management:student_detail' student.id %}" class="text-decoration-none">
+                                            {{ student.username }}
+                                        </a>
+                                    </h6>
+                                    <small class="text-muted">
+                                        {% if student.last_login %}
+                                            最后登录：{{ student.last_login|date:"m-d H:i" }}
+                                        {% else %}
+                                            从未登录
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    {% if student.is_active %}
+                                    <span class="badge bg-success">活跃</span> {% else %}
+                                    <span class="badge bg-secondary">禁用</span> {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12">
+                        <p class="text-muted text-center">暂无活跃学生</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 活跃度趋势图表
+    const activityData = {
+        {
+            activity_trend |
+                default: "[]" | safe
+        }
+    };
+
+    if (document.getElementById('activityChart')) {
+        const ctx = document.getElementById('activityChart').getContext('2d');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: activityData.map(item => item.date || ''),
+                datasets: [{
+                    label: '活跃学生数',
+                    data: activityData.map(item => item.active_students || 0),
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }, {
+                    label: '新注册学生',
+                    data: activityData.map(item => item.new_students || 0),
+                    borderColor: '#f5576c',
+                    backgroundColor: 'rgba(245, 87, 108, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top'
+                    }
+                }
+            }
+        });
+    }
+
+    // 快速操作函数
+    function exportAllData() {
+        if (confirm('确定要导出所有学生数据吗？')) {
+            window.open('/students/api/export-all/', '_blank');
+        }
+    }
+
+    function showStatistics() {
+        window.location.href = "{% url 'student_management:students_list' %}";
+    }
+</script>
+{% endblock %}
