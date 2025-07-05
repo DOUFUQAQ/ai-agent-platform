@@ -1,0 +1,322 @@
+{% extends 'base.html' %} {% load static %} {% block title %}{{ page_title }}{% endblock %} {% block extra_css %}
+<style>
+    .student-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .student-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 2rem;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        transition: transform 0.3s ease;
+    }
+    
+    .info-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .info-card-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #ecf0f1;
+    }
+    
+    .tag-item {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        color: white;
+        margin: 3px;
+        background-color: #007bff;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        margin: 5px;
+    }
+    
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+    }
+    
+    .note-item {
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 0 8px 8px 0;
+    }
+    
+    .note-item.important {
+        border-left-color: #dc3545;
+        background: #fff5f5;
+    }
+    
+    .session-item {
+        background: #f8f9fa;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        border-left: 4px solid #28a745;
+    }
+    
+    .action-btn {
+        margin: 5px;
+        transition: all 0.3s ease;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %} {% block content %}
+<div class="container-fluid">
+    {% if student %}
+    <!-- 学生头部信息 -->
+    <div class="student-header">
+        <div class="d-flex align-items-center">
+            <div class="student-avatar me-4">
+                {{ student.username|first|upper }}
+            </div>
+            <div class="flex-grow-1">
+                <h1 class="mb-2">{{ student.username }}</h1>
+                {% if student.first_name or student.last_name %}
+                <p class="mb-1 opacity-75">{{ student.first_name }} {{ student.last_name }}</p>
+                {% endif %}
+                <p class="mb-1 opacity-75">{{ student.email }}</p>
+                <small class="opacity-75">
+                    注册时间: {{ student.date_joined|date:"Y-m-d H:i" }}
+                    {% if student.last_login %}
+                    | 最后登录: {{ student.last_login|date:"Y-m-d H:i" }}
+                    {% else %}
+                    | 从未登录
+                    {% endif %}
+                </small>
+            </div>
+            <div class="text-end">
+                {% if student.is_active %}
+                <span class="badge bg-light text-dark fs-6">活跃用户</span> {% else %}
+                <span class="badge bg-warning fs-6">已禁用</span> {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="d-flex gap-2 mb-4">
+        <a href="{% url 'student_management:students_list' %}" class="btn btn-secondary action-btn">
+            <i class="fas fa-arrow-left me-2"></i>返回列表
+        </a>
+        <a href="{% url 'student_management:student_usage_history' student.id %}" class="btn btn-primary action-btn">
+            <i class="fas fa-chart-line me-2"></i>使用历史
+        </a>
+        <a href="{% url 'student_management:export_student_data' student.id %}" class="btn btn-success action-btn" target="_blank">
+            <i class="fas fa-download me-2"></i>导出数据
+        </a>
+    </div>
+
+    <div class="row">
+        <!-- 左列 -->
+        <div class="col-lg-8">
+            <!-- 使用统计 -->
+            <div class="info-card">
+                <div class="info-card-title">
+                    <i class="fas fa-chart-bar me-2"></i>使用统计
+                </div>
+                {% if student.usage_overview %}
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <div class="stat-number">{{ student.usage_overview.total_sessions|default:0 }}</div>
+                            <div class="stat-label">总会话数</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <div class="stat-number">{{ student.usage_overview.total_messages|default:0 }}</div>
+                            <div class="stat-label">总消息数</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <div class="stat-number">{{ student.usage_overview.recent_sessions|default:0 }}</div>
+                            <div class="stat-label">近30天会话</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <div class="stat-number">
+                                {% if student.usage_overview.avg_session_duration %} {{ student.usage_overview.avg_session_duration|floatformat:1 }}分钟 {% else %} 0分钟 {% endif %}
+                            </div>
+                            <div class="stat-label">平均时长</div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted">暂无使用数据</p>
+                {% endif %}
+            </div>
+
+            <!-- 最近会话 -->
+            <div class="info-card">
+                <div class="info-card-title">
+                    <i class="fas fa-comments me-2"></i>最近会话
+                </div>
+                {% if student.recent_sessions %}
+                <div class="session-list" style="max-height: 400px; overflow-y: auto;">
+                    {% for session in student.recent_sessions %}
+                    <div class="session-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ session.title|default:"无标题会话" }}</h6>
+                                <small class="text-muted">
+                                    功能: {{ session.function_code|default:"未知" }} | 
+                                    消息数: {{ session.message_count|default:0 }} |
+                                    Token: {{ session.total_tokens|default:0 }}
+                                </small>
+                            </div>
+                            <small class="text-muted">{{ session.started_at|date:"m-d H:i" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">暂无会话记录</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 右列 -->
+        <div class="col-lg-4">
+            <!-- 标签 -->
+            <div class="info-card">
+                <div class="info-card-title">
+                    <i class="fas fa-tags me-2"></i>学生标签
+                </div>
+                {% if student.tags %}
+                <div class="tags-container">
+                    {% for tag in student.tags %}
+                    <span class="tag-item" style="background-color: {{ tag.color }};">
+                        {{ tag.name }}
+                    </span> {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">暂无标签</p>
+                {% endif %}
+            </div>
+
+            <!-- 备注 -->
+            <div class="info-card">
+                <div class="info-card-title">
+                    <i class="fas fa-sticky-note me-2"></i>备注记录 ({{ student.notes_count|default:0 }})
+                </div>
+                {% if student.notes %}
+                <div class="notes-list" style="max-height: 400px; overflow-y: auto;">
+                    {% for note in student.notes %}
+                    <div class="note-item {% if note.is_important %}important{% endif %}">
+                        <div>
+                            <h6 class="mb-1">
+                                {{ note.title }} {% if note.is_important %}
+                                <i class="fas fa-exclamation-triangle text-danger ms-1"></i> {% endif %}
+                            </h6>
+                            <p class="mb-1">{{ note.content|truncatechars:100 }}</p>
+                            <small class="text-muted">
+                                {{ note.created_by }} - {{ note.created_at|date:"m-d H:i" }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">暂无备注</p>
+                {% endif %}
+            </div>
+
+            <!-- 基本信息 -->
+            <div class="info-card">
+                <div class="info-card-title">
+                    <i class="fas fa-info-circle me-2"></i>基本信息
+                </div>
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>用户ID:</strong></td>
+                        <td>{{ student.id }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>用户名:</strong></td>
+                        <td>{{ student.username }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>邮箱:</strong></td>
+                        <td>{{ student.email }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>注册时间:</strong></td>
+                        <td>{{ student.date_joined|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>账户状态:</strong></td>
+                        <td>
+                            {% if student.is_active %}
+                            <span class="badge bg-success">活跃</span> {% else %}
+                            <span class="badge bg-secondary">禁用</span> {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- 学生不存在 -->
+    <div class="text-center py-5">
+        <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+        <h3 class="text-muted">学生不存在</h3>
+        <p class="text-muted">请检查学生ID是否正确</p>
+        <a href="{% url 'student_management:students_list' %}" class="btn btn-primary">
+            <i class="fas fa-arrow-left me-2"></i>返回学生列表
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+    // 简单的页面交互功能
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('学生详情页面加载完成');
+    });
+</script>
+{% endblock %}
