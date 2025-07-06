@@ -1,0 +1,2267 @@
+{% extends 'base.html' %} {% load static %} {% block title %}AI 对话 - AI Agent 平台{% endblock %} {% block extra_head %}
+<meta name="csrf-token" content="{{ csrf_token }}"> {% endblock %} {% block extra_css %}
+<style>
+    /* 重置和基础样式 */
+    
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    body {
+        margin: 0;
+        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        color: #ffffff;
+        overflow-x: hidden;
+    }
+    /* 隐藏原有导航栏 */
+    
+    .navbar {
+        display: none !important;
+    }
+    /* 移动端菜单按钮 */
+    
+    .mobile-menu-btn {
+        display: none;
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .mobile-menu-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    /* 主容器 */
+    
+    .chat-wrapper {
+        display: flex;
+        height: calc(100vh - 60px);
+        min-height: 600px;
+        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .chat-wrapper::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 25% 25%, rgba(102, 126, 234, 0.03) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(118, 75, 162, 0.03) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: 0;
+    }
+    /* 左侧边栏美化 */
+    
+    .sidebar {
+        width: 320px;
+        min-width: 320px;
+        background: linear-gradient(180deg, #2d2d2d 0%, #1f1f1f 100%);
+        border-right: 1px solid rgba(64, 64, 64, 0.8);
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+        z-index: 10;
+        transition: transform 0.3s ease;
+    }
+    /* 移动端样式 */
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 999;
+            transform: translateX(-100%);
+        }
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        .chat-wrapper {
+            height: 100vh;
+        }
+        .main-chat {
+            width: 100%;
+        }
+        .chat-header {
+            padding: 15px 20px;
+        }
+        .chat-header-content {
+            flex-direction: column;
+            gap: 16px;
+            align-items: stretch;
+        }
+        .model-selector-container {
+            flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
+        }
+        .user-info-container {
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+        .token-stats-btn {
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+        .model-selector {
+            flex-direction: column;
+            gap: 6px;
+            align-items: stretch;
+        }
+        .model-selector select {
+            min-width: auto;
+            width: 100%;
+        }
+        .chat-messages {
+            padding: 20px 16px;
+        }
+        .chat-input-container {
+            padding: 16px;
+        }
+        .welcome-message {
+            padding: 40px 16px;
+        }
+        .welcome-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        .welcome-title {
+            font-size: 24px;
+        }
+        .welcome-subtitle {
+            font-size: 16px;
+        }
+        .message-bubble {
+            padding: 14px 18px;
+            font-size: 14px;
+        }
+        .input-hint {
+            display: none;
+        }
+        .chat-input {
+            padding-right: 60px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+        }
+        .chat-input-container {
+            padding: 12px;
+        }
+        .chat-input-wrapper {
+            padding: 12px 16px;
+        }
+        .send-button {
+            width: 36px;
+            height: 36px;
+        }
+        .welcome-message {
+            padding: 30px 12px;
+        }
+    }
+    
+    .sidebar::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.5), transparent);
+    }
+    
+    .sidebar-header {
+        padding: 24px;
+        border-bottom: 1px solid rgba(64, 64, 64, 0.5);
+        background: rgba(45, 45, 45, 0.8);
+        backdrop-filter: blur(10px);
+    }
+    
+    .sidebar-logo {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+    
+    .sidebar-logo h2 {
+        font-size: 22px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: -0.5px;
+        margin: 0;
+    }
+    
+    .logo-icon {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        color: white;
+    }
+    
+    .new-chat-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 14px 18px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+    
+    .new-chat-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .chat-history {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        max-height: calc(100vh - 200px);
+    }
+    
+    .chat-history h3 {
+        color: #888;
+        font-size: 12px;
+        font-weight: 500;
+        margin-bottom: 16px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.8;
+    }
+    
+    .chat-history-item {
+        padding: 16px;
+        margin-bottom: 8px;
+        border-radius: 12px;
+        background: rgba(64, 64, 64, 0.3);
+        border: 1px solid rgba(64, 64, 64, 0.5);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .chat-history-item:hover {
+        background: rgba(102, 126, 234, 0.1);
+        border-color: rgba(102, 126, 234, 0.3);
+        transform: translateX(4px);
+    }
+    
+    .chat-history-item.active {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+        border-color: rgba(102, 126, 234, 0.6);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    }
+    
+    .session-content {
+        flex: 1;
+        min-width: 0;
+        cursor: pointer;
+    }
+    
+    .session-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 6px;
+    }
+    
+    .session-title {
+        display: flex;
+        align-items: center;
+        color: #ffffff;
+        font-weight: 500;
+        font-size: 14px;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .session-title .title-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .session-time {
+        color: #888;
+        font-size: 11px;
+        white-space: nowrap;
+        margin-left: 8px;
+    }
+    
+    .session-summary {
+        color: #aaa;
+        font-size: 12px;
+        line-height: 1.4;
+        margin-top: 4px;
+    }
+    
+    .session-actions {
+        display: flex;
+        align-items: center;
+        margin-left: 8px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    
+    .chat-history-item:hover .session-actions {
+        opacity: 1;
+    }
+    
+    .session-delete-btn {
+        background: none;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        padding: 6px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+    }
+    
+    .session-delete-btn:hover {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        transform: scale(1.1);
+    }
+    
+    .empty-history-state {
+        padding: 20px 0;
+    }
+    /* 主聊天区域 */
+    
+    .main-chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
+        position: relative;
+        z-index: 1;
+        min-width: 0;
+    }
+    
+    .main-chat::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.02) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(118, 75, 162, 0.02) 0%, transparent 50%), radial-gradient(circle at 40% 80%, rgba(102, 126, 234, 0.01) 0%, transparent 50%);
+        pointer-events: none;
+    }
+    /* 聊天头部 */
+    
+    .chat-header {
+        padding: 20px 28px;
+        border-bottom: 1px solid rgba(64, 64, 64, 0.3);
+        background: rgba(45, 45, 45, 0.5);
+        backdrop-filter: blur(15px);
+        z-index: 10;
+        position: relative;
+    }
+    
+    .chat-header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .model-selector-container {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+    }
+    
+    .user-info-container {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .user-welcome {
+        display: flex;
+        align-items: center;
+    }
+    
+    .user-greeting {
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.9;
+    }
+    
+    .token-stats-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .token-stats-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .token-stats-btn i {
+        font-size: 14px;
+    }
+    /* Agno 智能体选择器样式 */
+    
+    .agno-agent-selector {
+        background: rgba(45, 45, 45, 0.8);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+    }
+    
+    .agno-agent-selector h3 {
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .agno-agents-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+    }
+    
+    .agno-agent-card {
+        background: rgba(64, 64, 64, 0.3);
+        border-radius: 10px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .agno-agent-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .agno-agent-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.2);
+        border-color: rgba(102, 126, 234, 0.3);
+    }
+    
+    .agno-agent-card:hover::before {
+        opacity: 1;
+    }
+    
+    .agno-agent-card.active {
+        border-color: #667eea;
+        background: rgba(102, 126, 234, 0.15);
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .agno-agent-card.active::before {
+        opacity: 1;
+    }
+    
+    .agno-agent-content {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .agno-agent-card h5 {
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .agno-agent-card p {
+        color: #aaa;
+        font-size: 12px;
+        line-height: 1.4;
+        margin: 0;
+    }
+    
+    .agno-badge {
+        background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 500;
+        margin-left: 8px;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    }
+    
+    .agno-health-status {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        z-index: 1000;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+    
+    .agno-health-healthy {
+        background: rgba(16, 185, 129, 0.9);
+        color: white;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .agno-health-partial {
+        background: rgba(245, 158, 11, 0.9);
+        color: white;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    
+    .agno-health-error {
+        background: rgba(239, 68, 68, 0.9);
+        color: white;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    /* 消息样式增强 */
+    
+    .message.agno-message .message-bubble {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+        border-left: 3px solid #667eea;
+    }
+    
+    .message.agno-message .message-avatar {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .model-selector-container {
+        flex-wrap: wrap;
+    }
+    
+    .model-selector {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .model-selector label {
+        font-size: 14px;
+        color: #cccccc;
+        font-weight: 500;
+        margin: 0;
+    }
+    
+    .model-selector select {
+        background: rgba(64, 64, 64, 0.8);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        color: #ffffff;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        outline: none;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    }
+    
+    .model-selector select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    /* 聊天消息区域 */
+    
+    .chat-messages {
+        flex: 1;
+        padding: 32px;
+        overflow-y: auto;
+        position: relative;
+        z-index: 1;
+        min-height: 0;
+    }
+    
+    .welcome-message {
+        text-align: center;
+        padding: 80px 32px;
+        position: relative;
+    }
+    
+    .welcome-icon {
+        font-size: 80px;
+        margin-bottom: 32px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        display: block;
+        animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+        0%,
+        100% {
+            transform: translateY(0px);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+    
+    .welcome-title {
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 16px;
+        color: #ffffff;
+        letter-spacing: -0.5px;
+    }
+    
+    .welcome-subtitle {
+        font-size: 18px;
+        line-height: 1.6;
+        max-width: 500px;
+        margin: 0 auto;
+        color: #cccccc;
+        opacity: 0.9;
+    }
+    /* 消息样式 */
+    
+    .message {
+        margin-bottom: 32px;
+        display: flex;
+        gap: 16px;
+        animation: slideIn 0.4s ease-out;
+        opacity: 0;
+        animation-fill-mode: forwards;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .message.user {
+        flex-direction: row-reverse;
+    }
+    
+    .message-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 18px;
+        font-weight: 700;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .message.user .message-avatar {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .message.assistant .message-avatar {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: white;
+    }
+    
+    .message-content {
+        flex: 1;
+        max-width: calc(100% - 80px);
+    }
+    
+    .message-bubble {
+        padding: 18px 24px;
+        border-radius: 18px;
+        line-height: 1.6;
+        font-size: 15px;
+        word-wrap: break-word;
+        position: relative;
+        backdrop-filter: blur(10px);
+    }
+    
+    .message.user .message-bubble {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-bottom-right-radius: 6px;
+        margin-left: auto;
+        max-width: 85%;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .message.assistant .message-bubble {
+        background: rgba(45, 45, 45, 0.8);
+        color: #ffffff;
+        border: 1px solid rgba(64, 64, 64, 0.5);
+        border-bottom-left-radius: 6px;
+        max-width: 90%;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .message-time {
+        font-size: 12px;
+        color: #888888;
+        margin-top: 8px;
+        opacity: 0.8;
+    }
+    
+    .message.user .message-time {
+        text-align: right;
+    }
+    
+    .message.assistant .message-time {
+        text-align: left;
+    }
+    /* 打字指示器 */
+    
+    .typing-indicator {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 32px;
+        animation: slideIn 0.4s ease-out;
+    }
+    
+    .typing-indicator .message-bubble {
+        background: rgba(45, 45, 45, 0.8);
+        border: 1px solid rgba(64, 64, 64, 0.5);
+        padding: 18px 24px;
+        border-radius: 18px;
+        border-bottom-left-radius: 6px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .typing-dots {
+        display: flex;
+        gap: 6px;
+    }
+    
+    .typing-dots span {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        animation: typing 1.4s infinite ease-in-out;
+    }
+    
+    .typing-dots span:nth-child(1) {
+        animation-delay: -0.32s;
+    }
+    
+    .typing-dots span:nth-child(2) {
+        animation-delay: -0.16s;
+    }
+    
+    .typing-dots span:nth-child(3) {
+        animation-delay: 0s;
+    }
+    
+    @keyframes typing {
+        0%,
+        80%,
+        100% {
+            transform: scale(0.8);
+            opacity: 0.5;
+        }
+        40% {
+            transform: scale(1.2);
+            opacity: 1;
+        }
+    }
+    /* 输入区域 */
+    
+    .chat-input-container {
+        padding: 28px;
+        background: rgba(26, 26, 26, 0.95);
+        backdrop-filter: blur(15px);
+        border-top: 1px solid rgba(64, 64, 64, 0.3);
+        position: relative;
+        z-index: 10;
+    }
+    
+    .chat-input-wrapper {
+        background: rgba(45, 45, 45, 0.8);
+        border: 1px solid rgba(64, 64, 64, 0.5);
+        border-radius: 16px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        position: relative;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .chat-input-wrapper:focus-within {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1), 0 8px 25px rgba(0, 0, 0, 0.3);
+        transform: translateY(-2px);
+    }
+    
+    .chat-input {
+        width: 100%;
+        background: transparent;
+        border: none;
+        color: #ffffff;
+        font-size: 16px;
+        resize: none;
+        outline: none;
+        min-height: 24px;
+        max-height: 120px;
+        line-height: 1.5;
+        font-family: inherit;
+    }
+    
+    .chat-input::placeholder {
+        color: #888888;
+        font-style: italic;
+    }
+    
+    .input-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 16px;
+    }
+    
+    .input-hint {
+        font-size: 12px;
+        color: #888888;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .deepseek-thinking {
+        color: #667eea !important;
+        font-weight: 500;
+    }
+    
+    .send-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 12px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .send-button:hover {
+        transform: translateY(-2px) scale(1.05);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    
+    .send-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+    /* 滚动条美化 */
+    
+    .chat-messages::-webkit-scrollbar,
+    .chat-history::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-track,
+    .chat-history::-webkit-scrollbar-track {
+        background: rgba(45, 45, 45, 0.3);
+        border-radius: 4px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb,
+    .chat-history::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb:hover,
+    .chat-history::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    }
+    /* 响应式设计 */
+    
+    @media (max-width: 1200px) {
+        .sidebar {
+            width: 280px;
+        }
+        .chat-messages {
+            padding: 24px;
+        }
+        .chat-input-container {
+            padding: 20px;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .sidebar {
+            width: 100%;
+            position: fixed;
+            left: -100%;
+            z-index: 1000;
+            transition: left 0.3s ease;
+            border-right: none;
+            border-bottom: 1px solid rgba(64, 64, 64, 0.3);
+        }
+        .sidebar.open {
+            left: 0;
+        }
+        .main-chat {
+            width: 100%;
+        }
+        .chat-messages {
+            padding: 16px;
+        }
+        .chat-input-container {
+            padding: 16px;
+        }
+        .model-selector-container {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 16px;
+        }
+        .welcome-message {
+            padding: 60px 24px;
+        }
+        .welcome-icon {
+            font-size: 64px;
+        }
+        .welcome-title {
+            font-size: 24px;
+        }
+        .welcome-subtitle {
+            font-size: 16px;
+        }
+    }
+    /* 移动端菜单按钮 */
+    
+    .mobile-menu-btn {
+        display: none;
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .mobile-menu-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    /* 响应式设计 */
+    
+    @media (max-width: 768px) {
+        .mobile-menu-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 999;
+            transform: translateX(-100%);
+        }
+        .sidebar.open {
+            transform: translateX(0);
+        }
+        .chat-wrapper {
+            height: 100vh;
+        }
+        .main-chat {
+            width: 100%;
+        }
+        .chat-messages {
+            padding: 20px 16px;
+        }
+        .message-bubble {
+            padding: 14px 18px;
+            font-size: 14px;
+        }
+        .input-hint {
+            display: none;
+        }
+        .chat-input {
+            padding-right: 60px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .sidebar {
+            width: 280px;
+            min-width: 280px;
+        }
+    }
+    /* 加载动画 */
+    
+    @keyframes pulse {
+        0%,
+        100% {
+            opacity: 0.8;
+        }
+        50% {
+            opacity: 1;
+        }
+    }
+    
+    .loading {
+        animation: pulse 1.5s infinite;
+    }
+</style>
+{% endblock %} {% block content %}
+<!-- CSRF Token -->
+{% csrf_token %}
+
+<!-- 移动端菜单按钮 -->
+<button class="mobile-menu-btn" onclick="toggleSidebar()" style="display: none; position: fixed; top: 20px; left: 20px; z-index: 1000; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); transition: all 0.3s ease;">
+    <i class="fas fa-bars"></i>
+</button>
+
+<div class="chat-wrapper">
+    <!-- 左侧边栏 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="logo-icon">🤖</div>
+                <h2>AI Agent</h2>
+            </div>
+            <button class="new-chat-btn" onclick="newSession()">
+                <i class="fas fa-plus"></i>
+                开启新对话
+            </button>
+        </div>
+
+        <div class="chat-history">
+            <h3 style="color: #888; font-size: 14px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px;">最近对话</h3>
+            <div class="chat-history-item active">
+                <i class="fas fa-message me-2"></i>AI 助手功能介绍
+            </div>
+            <div class="chat-history-item">
+                <i class="fas fa-graduation-cap me-2"></i>学业规划咨询
+            </div>
+            <div class="chat-history-item">
+                <i class="fas fa-calendar me-2"></i>课程安排查询
+            </div>
+        </div>
+    </div>
+
+    <!-- 主聊天区域 -->
+    <div class="main-chat">
+        <!-- 聊天头部 -->
+        <div class="chat-header">
+            <div class="chat-header-content">
+                <div class="model-selector-container">
+                    <div class="model-selector">
+                        <label><i class="fas fa-cogs"></i> AI功能:</label>
+                        <select id="functionSelect">
+                            <option value="qa">通用问答助手</option>
+                            <option value="course_selection">选课助手</option>
+                            <option value="calendar">AI日历助手</option>
+                            <option value="email">邮件助手</option>
+                            <option value="study_plan">学业规划助手</option>
+                            <option value="document">文档助手</option>
+                            <option value="translation">翻译助手</option>
+                        </select>
+                    </div>
+                    <div class="model-selector">
+                        <label><i class="fas fa-brain"></i> AI模型:</label>
+                        <select id="modelSelect">
+                            <option value="chat">DeepSeek Chat</option>
+                            <option value="reasoning">DeepSeek Reasoner</option>
+                        </select>
+                    </div>
+                    <div class="model-selector">
+                        <button id="agnoToggleBtn" class="new-chat-btn" onclick="toggleAgnoMode()" style="padding: 10px 16px; font-size: 12px; min-width: 120px;">
+                            <i class="fas fa-robot"></i> 启用 Agno
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 用户信息和Token统计按钮 -->
+                <div class="user-info-container">
+                    <div class="user-welcome">
+                        <span class="user-greeting">欢迎，{{ user.username }}</span>
+                    </div>
+                    <a href="{% url 'ai_agent:user_token_dashboard' %}" class="token-stats-btn" title="查看Token使用统计">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Token统计</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Agno 智能体选择器 -->
+            <div class="agno-agent-selector" id="agnoAgentSelector" style="display: none;">
+                <h3><i class="fas fa-robot"></i> Agno 智能体 <span class="agno-badge">AI增强</span></h3>
+                <div class="agno-agents-grid">
+                    <div class="agno-agent-card" data-agent="chat">
+                        <div class="agno-agent-content">
+                            <h5>💬 聊天助手</h5>
+                            <p>通用对话智能体，适合日常交流和问答</p>
+                        </div>
+                    </div>
+                    <div class="agno-agent-card" data-agent="reasoning">
+                        <div class="agno-agent-content">
+                            <h5>🧠 推理专家</h5>
+                            <p>具有高级推理能力，适合复杂问题分析</p>
+                        </div>
+                    </div>
+                    <div class="agno-agent-card" data-agent="tutor">
+                        <div class="agno-agent-content">
+                            <h5>👨‍🏫 学习导师</h5>
+                            <p>专业教学智能体，提供个性化学习指导</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 聊天消息区域 -->
+        <div class="chat-messages" id="chatContainer">
+            <div class="welcome-message">
+                <div class="welcome-icon">🚀</div>
+                <div class="welcome-title">我是 AI Agent，很高兴见到你！</div>
+                <div class="welcome-subtitle">
+                    我可以帮你写代码、读文件、写各种创意内容，请把你的任务交给我~
+                </div>
+            </div>
+        </div>
+
+        <!-- 输入区域 -->
+        <div class="chat-input-container">
+            <div class="chat-input-wrapper">
+                <textarea class="chat-input" id="message-input" placeholder="给 AI Agent 发送消息" rows="1" maxlength="2000"></textarea>
+                <div class="input-actions">
+                    <div class="input-hint">
+                        <span class="deepseek-thinking" style="color: #667eea;">深度思考 (R1)</span>
+                        <span style="margin: 0 8px;">•</span>
+                        <span style="color: #4facfe;">联网搜索</span>
+                    </div>
+                    <button class="send-button" id="send-btn" onclick="sendMessage()">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Agno 健康状态指示器 -->
+<div id="agnoHealthStatus" class="agno-health-status" style="display: none;"></div>
+
+{% endblock %} {% block extra_js %}
+<!-- 加载axios库 -->
+<script src="https://cdn.bootcdn.net/ajax/libs/axios/1.6.0/axios.min.js"></script>
+<script>
+    // 检查axios是否加载成功
+    if (typeof axios === 'undefined') {
+        console.error('Axios 未正确加载，尝试备用CDN');
+        // 备用CDN加载
+        const script = document.createElement('script');
+        script.src = 'https://cdn.bootcdn.net/ajax/libs/axios/1.6.0/axios.min.js';
+        script.onload = function() {
+            console.log('Axios 备用CDN加载成功');
+        };
+        script.onerror = function() {
+            console.error('Axios 备用CDN也加载失败');
+        };
+        document.head.appendChild(script);
+    } else {
+        console.log('Axios 加载成功');
+    }
+
+    // 配置axios默认设置和CSRF token
+    document.addEventListener('DOMContentLoaded', function() {
+        // 获取CSRF token
+        const csrfTokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        const csrfMetaElement = document.querySelector('meta[name="csrf-token"]');
+        const csrfToken = (csrfTokenElement && csrfTokenElement.value) ||
+            (csrfMetaElement && csrfMetaElement.content) ||
+            getCookie('csrftoken');
+
+        if (axios && csrfToken) {
+            axios.defaults.headers.common['X-CSRFToken'] = csrfToken;
+            axios.defaults.headers.common['Content-Type'] = 'application/json';
+            console.log('Axios配置完成，CSRF Token已设置:', csrfToken.substring(0, 10) + '...');
+        } else {
+            console.error('CSRF Token未找到或Axios未加载');
+        }
+    });
+
+    // 获取Cookie值的辅助函数
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    let currentSessionId = null;
+    let isTyping = false;
+    let sessionHistory = []; // 存储会话历史
+
+    // Agno 相关变量
+    let currentAgnoAgent = null;
+    let agnoAvailable = false;
+    let useAgno = false;
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeChat();
+        setupEventListeners();
+        loadChatHistory(); // 加载历史会话
+        checkAgnoHealth(); // 检查Agno服务状态
+        setupAgnoEventListeners(); // 设置Agno事件监听器
+    });
+
+    function initializeChat() {
+        newSession();
+        // 清除欢迎消息，显示初始AI消息
+        setTimeout(() => {
+            document.getElementById('chatContainer').innerHTML = '';
+            addMessage('assistant', '你好！我是AI智能助手，很高兴为你服务。请选择你需要的功能，然后开始对话吧！');
+        }, 1000);
+    }
+
+    // 设置事件监听器
+    function setupEventListeners() {
+        // 输入框回车事件
+        const messageInput = document.getElementById('message-input');
+        if (messageInput) {
+            messageInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!isTyping) {
+                        sendMessage();
+                    }
+                }
+            });
+
+            // 自动调整输入框高度
+            messageInput.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+        }
+
+        // 发送按钮点击事件
+        const sendButton = document.getElementById('send-btn');
+        if (sendButton) {
+            sendButton.addEventListener('click', sendMessage);
+        }
+    }
+
+    // 加载历史会话
+    function loadChatHistory() {
+        axios.get('/ai_agent/api/chat/history/')
+            .then(function(response) {
+                if (response.data.success) {
+                    sessionHistory = response.data.history || [];
+                    updateChatHistoryUI();
+                }
+            })
+            .catch(function(error) {
+                console.error('加载历史会话失败:', error);
+            });
+    }
+
+    // 更新历史会话UI
+    function updateChatHistoryUI() {
+        const historyContainer = document.querySelector('.chat-history');
+
+        // 清除现有的历史记录（保留标题）
+        const existingItems = historyContainer.querySelectorAll('.chat-history-item');
+        existingItems.forEach(item => item.remove());
+
+        // 如果没有历史会话，显示默认项
+        if (sessionHistory.length === 0) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'empty-history-state';
+            emptyState.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #888;">
+                    <i class="fas fa-comments" style="font-size: 24px; margin-bottom: 8px;"></i>
+                    <p style="margin: 0; font-size: 14px;">暂无历史对话</p>
+                    <p style="margin: 4px 0 0 0; font-size: 12px;">开始新对话后会显示在这里</p>
+                </div>
+            `;
+            historyContainer.appendChild(emptyState);
+        } else {
+            // 显示实际的历史会话
+            sessionHistory.forEach((session, index) => {
+                const isActive = session.session_id === currentSessionId;
+                const title = getSessionTitle(session.messages);
+                const summary = getSessionSummary(session.messages);
+                const timeAgo = getTimeAgo(session.created_at || session.started_at);
+                const historyItem = createHistoryItem(session.session_id, title, summary, timeAgo, isActive);
+                historyContainer.appendChild(historyItem);
+            });
+        }
+    }
+
+    // 创建历史会话项
+    function createHistoryItem(sessionId, title, summary, timeAgo, isActive = false) {
+        const historyItem = document.createElement('div');
+        historyItem.className = `chat-history-item${isActive ? ' active' : ''}`;
+        historyItem.setAttribute('data-session-id', sessionId);
+
+        historyItem.innerHTML = `
+            <div class="session-content" onclick="switchToSession('${sessionId}')">
+                <div class="session-header">
+                    <div class="session-title">
+                        <i class="fas fa-message me-2"></i>
+                        <span class="title-text">${title}</span>
+                    </div>
+                    <div class="session-time">${timeAgo}</div>
+                </div>
+                <div class="session-summary">${summary}</div>
+            </div>
+            <div class="session-actions">
+                <button class="session-delete-btn" onclick="deleteSession('${sessionId}')" title="删除会话">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+        `;
+
+        return historyItem;
+    }
+
+    // 获取会话标题（基于第一条用户消息）
+    function getSessionTitle(messages) {
+        if (!messages || messages.length === 0) return '新对话';
+
+        const firstUserMessage = messages.find(msg => msg.message_type === 'user');
+        if (firstUserMessage) {
+            const content = firstUserMessage.content.trim();
+            return content.length > 15 ? content.substring(0, 15) + '...' : content;
+        }
+
+        return '新对话';
+    }
+
+    // 获取会话摘要
+    function getSessionSummary(messages) {
+        if (!messages || messages.length === 0) return '暂无消息';
+
+        const messageCount = messages.length;
+        const userMessageCount = messages.filter(msg => msg.message_type === 'user').length;
+
+        if (messageCount === 0) return '暂无消息';
+        if (userMessageCount === 1) return '1 条对话';
+
+        return `${userMessageCount} 条对话 · ${messageCount} 条消息`;
+    }
+
+    // 获取相对时间
+    function getTimeAgo(dateString) {
+        if (!dateString) return '刚刚';
+
+        const now = new Date();
+        const date = new Date(dateString);
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return '刚刚';
+        if (diffMins < 60) return `${diffMins}分钟前`;
+        if (diffHours < 24) return `${diffHours}小时前`;
+        if (diffDays < 7) return `${diffDays}天前`;
+
+        return date.toLocaleDateString('zh-CN', {
+            month: 'short',
+            day: 'numeric'
+        });
+    }
+
+    // 删除会话
+    function deleteSession(sessionId) {
+        // 阻止事件冒泡
+        event.stopPropagation();
+
+        // 确认删除
+        if (!confirm('确定要删除这个会话吗？删除后无法恢复。')) {
+            return;
+        }
+
+        // 调用删除API
+        axios.post('/ai_agent/api/chat/end/', {
+                session_id: sessionId,
+                delete_session: true // 明确指定要删除会话
+            })
+            .then(function(response) {
+                if (response.data.success) {
+                    // 从本地历史中移除
+                    sessionHistory = sessionHistory.filter(session => session.session_id !== sessionId);
+
+                    // 如果删除的是当前会话，切换到新会话
+                    if (sessionId === currentSessionId) {
+                        newSession();
+                    } else {
+                        // 更新UI
+                        updateChatHistoryUI();
+                    }
+
+                    showNotification('会话已删除', 'success');
+                } else {
+                    showNotification('删除会话失败: ' + response.data.error, 'error');
+                }
+            })
+            .catch(function(error) {
+                console.error('删除会话失败:', error);
+                showNotification('删除会话失败，请重试', 'error');
+            });
+    }
+
+    // 切换到指定会话
+    function switchToSession(sessionId) {
+        if (sessionId === currentSessionId) return;
+
+        currentSessionId = sessionId;
+
+        // 更新UI活跃状态
+        document.querySelectorAll('.chat-history-item').forEach(item => {
+            item.classList.remove('active');
+        });
+
+        const activeItem = document.querySelector(`[data-session-id="${sessionId}"]`);
+        if (activeItem) {
+            activeItem.classList.add('active');
+        }
+
+        // 加载会话消息
+        loadSessionMessages(sessionId);
+    }
+
+    // 加载指定会话的消息
+    function loadSessionMessages(sessionId) {
+        // 清空当前聊天容器
+        clearChatMessages();
+
+        // 显示加载指示器
+        const chatContainer = document.getElementById('chatContainer');
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'loading-indicator';
+        loadingDiv.innerHTML = `
+            <div class="message assistant">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="message-bubble">正在加载会话历史...</div>
+                </div>
+            </div>
+        `;
+        chatContainer.appendChild(loadingDiv);
+
+        // 从会话历史中查找消息
+        const session = sessionHistory.find(s => s.session_id === sessionId);
+        if (session && session.messages) {
+            // 清除加载指示器
+            chatContainer.innerHTML = '';
+
+            // 加载历史消息
+            session.messages.forEach(message => {
+                // 检查消息是否包含Agno标识，如果有则提取智能体类型
+                let agentType = null;
+                let content = message.content;
+
+                // 优先检查消息对象中保存的agent_type
+                if (message.agent_type) {
+                    agentType = message.agent_type;
+                } else if (message.content && typeof message.content === 'string') {
+                    // 检查隐藏的智能体标识
+                    const hiddenMatch = message.content.match(/<!-- agno:(\w+) -->/);
+                    if (hiddenMatch) {
+                        agentType = hiddenMatch[1];
+                        // 移除隐藏标识，只显示实际内容
+                        content = message.content.replace(/\n<!-- agno:\w+ -->/, '');
+                    } else {
+                        // 检查徽章标识
+                        const agnoMatch = message.content.match(/💬 聊天助手|🧠 推理专家|👨‍🏫 学习导师/);
+                        if (agnoMatch) {
+                            if (agnoMatch[0].includes('聊天助手')) agentType = 'chat';
+                            else if (agnoMatch[0].includes('推理专家')) agentType = 'reasoning';
+                            else if (agnoMatch[0].includes('学习导师')) agentType = 'tutor';
+                        }
+                    }
+                }
+                addMessage(message.message_type, content, agentType);
+            });
+        } else {
+            // 如果没有找到本地历史，从服务器获取
+            axios.get(`/ai_agent/api/chat/history/?session_id=${sessionId}`)
+                .then(function(response) {
+                    chatContainer.innerHTML = '';
+
+                    if (response.data.success && response.data.history) {
+                        response.data.history.forEach(message => {
+                            // 检查消息是否包含Agno标识，如果有则提取智能体类型
+                            let agentType = null;
+                            if (message.content && typeof message.content === 'string') {
+                                const agnoMatch = message.content.match(/💬 聊天助手|🧠 推理专家|👨‍🏫 学习导师/);
+                                if (agnoMatch) {
+                                    if (agnoMatch[0].includes('聊天助手')) agentType = 'chat';
+                                    else if (agnoMatch[0].includes('推理专家')) agentType = 'reasoning';
+                                    else if (agnoMatch[0].includes('学习导师')) agentType = 'tutor';
+                                }
+                            }
+                            addMessage(message.message_type, message.content, agentType);
+                        });
+                    } else {
+                        addMessage('assistant', '会话历史加载失败，请重新开始对话。');
+                    }
+                })
+                .catch(function(error) {
+                    console.error('加载会话消息失败:', error);
+                    chatContainer.innerHTML = '';
+                    addMessage('assistant', '会话历史加载失败，请重新开始对话。');
+                });
+        }
+    }
+
+    function setupEventListeners() {
+        const messageInput = document.getElementById('message-input');
+
+        // 自动调整输入框高度
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+
+        // 键盘事件
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // 功能选择器变化事件
+        document.getElementById('functionSelect').addEventListener('change', function() {
+            const selectedFunction = this.options[this.selectedIndex].text;
+            showNotification(`已切换到: ${selectedFunction}`, 'info');
+        });
+
+        document.getElementById('modelSelect').addEventListener('change', function() {
+            const selectedModel = this.options[this.selectedIndex].text;
+            const modelValue = this.value;
+
+            if (modelValue === 'reasoning') {
+                showNotification(`已切换到: ${selectedModel}，适合复杂问题分析`, 'info');
+            } else {
+                showNotification(`已切换到: ${selectedModel}，适合快速对话`, 'info');
+            }
+        });
+    }
+
+    // 创建新会话
+    function newSession() {
+        const functionCode = document.getElementById('functionSelect').value;
+
+        axios.post('/ai_agent/api/chat/create/', {
+                function_code: functionCode
+            })
+            .then(function(response) {
+                if (response.data.success) {
+                    currentSessionId = response.data.session_id;
+
+                    // 清空聊天窗口
+                    clearChatMessages();
+
+                    // 显示新会话欢迎消息
+                    showWelcomeMessage();
+
+                    // 添加新会话到历史记录
+                    const newSession = {
+                        session_id: currentSessionId,
+                        title: '新对话',
+                        messages: [],
+                        created_at: new Date().toISOString()
+                    };
+                    sessionHistory.unshift(newSession);
+
+                    // 更新UI
+                    updateChatHistoryUI();
+
+                    showNotification('新会话已创建', 'success');
+                } else {
+                    showNotification('创建会话失败: ' + response.data.error, 'error');
+                }
+            })
+            .catch(function(error) {
+                console.error('创建会话失败:', error);
+                showNotification('创建会话失败，请重试', 'error');
+            });
+    }
+
+    // 清空聊天消息
+    function clearChatMessages() {
+        const chatContainer = document.getElementById('chatContainer');
+        chatContainer.innerHTML = '';
+    }
+
+    // 显示欢迎消息
+    function showWelcomeMessage() {
+        const chatContainer = document.getElementById('chatContainer');
+        const welcomeDiv = document.createElement('div');
+        welcomeDiv.className = 'welcome-message';
+
+        welcomeDiv.innerHTML = `
+            <div class="welcome-icon">🚀</div>
+            <div class="welcome-title">我是 AI Agent，很高兴见到你！</div>
+            <div class="welcome-subtitle">
+                我可以帮你写代码、读文件、写各种创意内容，请把你的任务交给我~
+            </div>
+        `;
+
+        chatContainer.appendChild(welcomeDiv);
+
+        // 1秒后替换为AI助手消息
+        setTimeout(() => {
+            clearChatMessages();
+            addMessage('assistant', '你好！我是AI智能助手，很高兴为你服务。请选择你需要的功能，然后开始对话吧！');
+        }, 1000);
+    }
+
+    // 发送消息
+    function sendMessage() {
+        const messageInput = document.getElementById('message-input');
+        const message = messageInput.value.trim();
+
+        if (!message) {
+            showNotification('请输入消息内容', 'warning');
+            return;
+        }
+
+        if (!currentSessionId) {
+            newSession();
+            setTimeout(() => sendMessage(), 1000);
+            return;
+        }
+
+        if (isTyping) {
+            showNotification('AI正在思考中，请稍候...', 'info');
+            return;
+        }
+
+        // 检查是否使用Agno
+        if (useAgno && currentAgnoAgent) {
+            sendAgnoMessage(message);
+            return;
+        }
+
+        addMessage('user', message);
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+        showTypingIndicator();
+
+        const sendButton = document.getElementById('send-btn');
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+        const functionCode = document.getElementById('functionSelect').value;
+        const modelType = document.getElementById('modelSelect').value;
+
+        axios.post('/ai_agent/api/chat/send/', {
+                session_id: currentSessionId,
+                message: message,
+                function_code: functionCode,
+                model_type: modelType
+            })
+            .then(function(response) {
+                hideTypingIndicator();
+
+                if (response.data.success) {
+                    addMessage('assistant', response.data.response);
+
+                    // 更新会话历史
+                    updateSessionHistory(message, response.data.response);
+                } else {
+                    const errorMsg = '抱歉，处理您的请求时出现了错误：' + response.data.error;
+                    addMessage('assistant', errorMsg);
+
+                    // 也要更新会话历史
+                    updateSessionHistory(message, errorMsg);
+                }
+            })
+            .catch(function(error) {
+                hideTypingIndicator();
+                console.error('发送消息失败:', error);
+                const errorMsg = '抱歉，网络连接出现问题，请稍后重试。';
+                addMessage('assistant', errorMsg);
+
+                // 也要更新会话历史
+                updateSessionHistory(message, errorMsg);
+            })
+            .finally(function() {
+                sendButton.disabled = false;
+                sendButton.innerHTML = '<i class="fas fa-arrow-up"></i>';
+                isTyping = false;
+            });
+    }
+
+    // 更新会话历史
+    function updateSessionHistory(userMessage, assistantMessage, agentType = null) {
+        const session = sessionHistory.find(s => s.session_id === currentSessionId);
+        if (session) {
+            // 添加用户消息
+            session.messages.push({
+                message_type: 'user',
+                content: userMessage,
+                created_at: new Date().toISOString()
+            });
+
+            // 添加助手消息（如果是Agno消息，在内容中包含智能体标识）
+            let assistantContent = assistantMessage;
+            if (agentType) {
+                // 为Agno消息添加智能体标识，这样在重新加载时能够识别
+                assistantContent = assistantMessage + `\n<!-- agno:${agentType} -->`;
+            }
+
+            session.messages.push({
+                message_type: 'assistant',
+                content: assistantContent,
+                created_at: new Date().toISOString(),
+                agent_type: agentType // 保存智能体类型
+            });
+
+            // 如果这是第一条消息，更新会话标题
+            if (session.messages.length === 2) { // 第一轮对话（用户+助手）
+                session.title = getSessionTitle(session.messages);
+                updateChatHistoryUI(); // 重新渲染历史列表以显示新标题
+            }
+        }
+    }
+
+    // 添加消息到聊天容器
+    function addMessage(type, content, agentType = null) {
+        const chatContainer = document.getElementById('chatContainer');
+        const messageDiv = document.createElement('div');
+
+        let messageClass = `message ${type}`;
+        if (type === 'assistant' && agentType) {
+            messageClass += ' agno-message';
+        }
+
+        messageDiv.className = messageClass;
+
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('zh-CN', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        let avatarContent = '🤖';
+        if (type === 'user') {
+            avatarContent = 'U';
+        } else if (type === 'system') {
+            avatarContent = '🔧';
+        }
+
+        let badge = '';
+        if (type === 'assistant' && agentType) {
+            badge = `<span class="agno-badge">${getAgentName(agentType)}</span>`;
+        } else if (type === 'error') {
+            badge = `<span class="agno-badge" style="background: #dc3545;">错误</span>`;
+        }
+
+        messageDiv.innerHTML = `
+            <div class="message-avatar">${avatarContent}</div>
+            <div class="message-content">
+                <div class="message-bubble">${content} ${badge}</div>
+                <div class="message-time">${timeString}</div>
+            </div>
+        `;
+
+        chatContainer.appendChild(messageDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // 显示打字指示器
+    function showTypingIndicator() {
+        isTyping = true;
+        const chatContainer = document.getElementById('chatContainer');
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'typing-indicator';
+        typingDiv.id = 'typingIndicator';
+
+        typingDiv.innerHTML = `
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+                <div class="message-bubble">
+                    <span class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
+                </div>
+            </div>
+        `;
+
+        chatContainer.appendChild(typingDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // 隐藏打字指示器
+    function hideTypingIndicator() {
+        const typingIndicator = document.getElementById('typingIndicator');
+        if (typingIndicator) {
+            typingIndicator.remove();
+        }
+    }
+
+    // 显示通知
+    function showNotification(message, type = 'info') {
+        // 移除现有通知
+        const existingNotification = document.querySelector('.notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+
+        // 创建通知元素
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+
+        // 设置图标
+        let icon = 'fa-info-circle';
+        if (type === 'success') icon = 'fa-check-circle';
+        if (type === 'error') icon = 'fa-exclamation-triangle';
+        if (type === 'warning') icon = 'fa-exclamation-circle';
+
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas ${icon}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+
+        // 添加样式
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            max-width: 300px;
+        `;
+
+        // 设置颜色
+        if (type === 'success') {
+            notification.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        } else if (type === 'error') {
+            notification.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+        } else if (type === 'warning') {
+            notification.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        } else {
+            notification.style.background = 'linear-gradient(135deg, #3b82f6, #2563eb)';
+        }
+
+        // 添加到页面
+        document.body.appendChild(notification);
+
+        // 显示动画
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+
+        // 自动隐藏
+        setTimeout(() => {
+            notification.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 300);
+        }, 3000);
+
+        // 样式定义
+        if (!document.querySelector('#notification-styles')) {
+            const styles = document.createElement('style');
+            styles.id = 'notification-styles';
+            styles.textContent = `
+                .notification-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .notification-content i {
+                    font-size: 16px;
+                }
+            `;
+            document.head.appendChild(styles);
+        }
+    }
+
+    // 移动端侧边栏切换
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.sidebar');
+        const menuBtn = document.querySelector('.mobile-menu-btn');
+
+        sidebar.classList.toggle('open');
+
+        // 在移动端显示菜单按钮
+        if (window.innerWidth <= 768) {
+            menuBtn.style.display = 'flex';
+            menuBtn.style.alignItems = 'center';
+            menuBtn.style.justifyContent = 'center';
+        }
+    }
+
+    // 窗口尺寸变化处理
+    window.addEventListener('resize', function() {
+        const sidebar = document.querySelector('.sidebar');
+        const menuBtn = document.querySelector('.mobile-menu-btn');
+
+        if (window.innerWidth > 768) {
+            sidebar.classList.remove('open');
+            menuBtn.style.display = 'none';
+        } else {
+            menuBtn.style.display = 'flex';
+            menuBtn.style.alignItems = 'center';
+            menuBtn.style.justifyContent = 'center';
+        }
+    });
+
+    // 点击页面其他地方关闭移动端侧边栏
+    document.addEventListener('click', function(e) {
+        const sidebar = document.querySelector('.sidebar');
+        const menuBtn = document.querySelector('.mobile-menu-btn');
+
+        if (window.innerWidth <= 768 &&
+            !sidebar.contains(e.target) &&
+            !menuBtn.contains(e.target) &&
+            sidebar.classList.contains('open')) {
+            sidebar.classList.remove('open');
+        }
+    });
+
+    // 初始化移动端按钮显示状态
+    document.addEventListener('DOMContentLoaded', function() {
+        const menuBtn = document.querySelector('.mobile-menu-btn');
+        if (window.innerWidth <= 768) {
+            menuBtn.style.display = 'flex';
+            menuBtn.style.alignItems = 'center';
+            menuBtn.style.justifyContent = 'center';
+        }
+    });
+
+    // =================== Agno 相关函数 ===================
+
+    // 检查Agno健康状态
+    function checkAgnoHealth() {
+        axios.get('/ai_agent/api/agno/health/')
+            .then(function(response) {
+                console.log('Agno Health Check Response:', response.data);
+                const status = document.getElementById('agnoHealthStatus');
+                if (response.data.success) {
+                    agnoAvailable = true;
+                    const healthClass = 'agno-health-' + response.data.status;
+                    status.className = 'agno-health-status ' + healthClass;
+                    status.textContent = `Agno状态: ${response.data.status}`;
+                    status.style.display = 'block';
+
+                    // 显示Agno选择器
+                    document.getElementById('agnoAgentSelector').style.display = 'block';
+                } else {
+                    agnoAvailable = false;
+                    status.className = 'agno-health-status agno-health-error';
+                    status.textContent = 'Agno状态: 不可用';
+                    status.style.display = 'block';
+                }
+            })
+            .catch(function(error) {
+                console.error('Agno Health Check Failed:', error);
+                agnoAvailable = false;
+                const status = document.getElementById('agnoHealthStatus');
+                status.className = 'agno-health-status agno-health-error';
+                status.textContent = 'Agno状态: 连接失败';
+                status.style.display = 'block';
+            });
+    }
+
+    // 设置Agno事件监听器
+    function setupAgnoEventListeners() {
+        // 智能体卡片点击事件
+        document.querySelectorAll('.agno-agent-card').forEach(card => {
+            card.addEventListener('click', function() {
+                if (!agnoAvailable) {
+                    showNotification('Agno服务不可用', 'error');
+                    return;
+                }
+
+                // 移除其他卡片的激活状态
+                document.querySelectorAll('.agno-agent-card').forEach(c => c.classList.remove('active'));
+
+                // 激活当前卡片
+                this.classList.add('active');
+
+                // 设置当前智能体
+                currentAgnoAgent = this.dataset.agent;
+                useAgno = true;
+
+                // 更新切换按钮状态
+                const toggleBtn = document.getElementById('agnoToggleBtn');
+                toggleBtn.innerHTML = '<i class="fas fa-brain"></i> 普通模式';
+
+                // 显示选择提示
+                const agentName = getAgentName(currentAgnoAgent);
+                showNotification(`已选择 ${agentName}`, 'success');
+
+                // 只有在聊天区域为空或只有欢迎消息时才添加提示
+                const chatContainer = document.getElementById('chatContainer');
+                const hasMessages = chatContainer.children.length > 0 &&
+                    !chatContainer.querySelector('.welcome-message');
+
+                if (!hasMessages) {
+                    // 如果没有消息或只有欢迎消息，添加Agno模式提示
+                    addMessage('system', `🤖 已切换到 ${agentName} 模式`);
+                    addMessage('system', '现在您可以与Agno智能体对话了！');
+                } else {
+                    // 如果有历史消息，只添加一个简单的模式切换提示
+                    addMessage('system', `🔄 已切换到 ${agentName} 模式`);
+                }
+            });
+        });
+    }
+
+    // 发送Agno消息
+    function sendAgnoMessage(message) {
+        if (!currentAgnoAgent || !agnoAvailable) {
+            showNotification('请先选择一个Agno智能体', 'warning');
+            return;
+        }
+
+        const messageInput = document.getElementById('message-input');
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+
+        // 显示用户消息
+        addMessage('user', message);
+
+        // 显示加载状态
+        isTyping = true;
+        const sendButton = document.getElementById('send-btn');
+        sendButton.disabled = true;
+        sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 处理中...';
+
+        showTypingIndicator();
+
+        // 获取CSRF令牌
+        const csrfToken = getCsrfToken();
+
+        // 发送到Agno API
+        axios.post('/ai_agent/api/agno/chat/', {
+                message: message,
+                agent_type: currentAgnoAgent,
+                session_id: currentSessionId
+            }, {
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(function(response) {
+                console.log('Agno API Response:', response.data);
+                hideTypingIndicator();
+
+                if (response.data.success) {
+                    addMessage('assistant', response.data.response, response.data.agent_type);
+
+                    // 更新会话历史，包含智能体类型信息
+                    updateSessionHistory(message, response.data.response, response.data.agent_type);
+                } else {
+                    addMessage('error', '抱歉，处理您的请求时出现错误：' + response.data.error);
+                }
+            })
+            .catch(function(error) {
+                console.error('Agno API Error:', error);
+                hideTypingIndicator();
+
+                let errorMsg = '网络错误';
+                if (error.response && error.response.data && error.response.data.error) {
+                    errorMsg = error.response.data.error;
+                } else if (error.response && error.response.data) {
+                    errorMsg = error.response.data;
+                }
+                addMessage('error', '抱歉，发生了错误：' + errorMsg);
+            })
+            .finally(function() {
+                isTyping = false;
+                sendButton.disabled = false;
+                sendButton.innerHTML = '<i class="fas fa-arrow-up"></i>';
+            });
+    }
+
+
+
+    // 获取智能体名称
+    function getAgentName(agent) {
+        const names = {
+            'chat': '💬 聊天助手',
+            'reasoning': '🧠 推理专家',
+            'tutor': '👨‍🏫 学习导师'
+        };
+        return names[agent] || agent;
+    }
+
+    // 获取CSRF令牌
+    function getCsrfToken() {
+        const csrfTokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+        const csrfMetaElement = document.querySelector('meta[name="csrf-token"]');
+        return (csrfTokenElement && csrfTokenElement.value) ||
+            (csrfMetaElement && csrfMetaElement.content) ||
+            getCookie('csrftoken');
+    }
+
+    // 清空聊天消息
+    function clearChatMessages() {
+        const chatContainer = document.getElementById('chatContainer');
+        chatContainer.innerHTML = '';
+    }
+
+    // 重置Agno状态
+    function resetAgnoState() {
+        currentAgnoAgent = null;
+        useAgno = false;
+        document.querySelectorAll('.agno-agent-card').forEach(card => {
+            card.classList.remove('active');
+        });
+    }
+
+    // 添加一个切换按钮来在Agno和普通模式之间切换
+    function toggleAgnoMode() {
+        const toggleBtn = document.getElementById('agnoToggleBtn');
+        const agnoSelector = document.getElementById('agnoAgentSelector');
+
+        if (useAgno) {
+            // 切换到普通模式
+            resetAgnoState();
+            toggleBtn.innerHTML = '<i class="fas fa-robot"></i> 启用 Agno';
+            agnoSelector.style.display = agnoAvailable ? 'block' : 'none';
+
+            // 添加模式切换提示（不清空历史记录）
+            addMessage('assistant', '🔄 已切换到普通AI模式，您可以继续使用DeepSeek AI服务。');
+            showNotification('已切换到普通AI模式', 'info');
+        } else {
+            // 切换到Agno模式
+            if (agnoAvailable) {
+                agnoSelector.style.display = 'block';
+                toggleBtn.innerHTML = '<i class="fas fa-brain"></i> 普通模式';
+                showNotification('请选择一个Agno智能体', 'info');
+            } else {
+                showNotification('Agno服务不可用', 'error');
+            }
+        }
+    }
+</script>
+{% endblock %}
