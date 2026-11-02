@@ -1,0 +1,19 @@
+# ---- 核心框架 ----
+Django==5.2
+djangorestframework==3.14.0
+django-cors-headers==4.0.0
+django-filter==23.2
+django-extensions==3.2.3
+Pillow==10.0.0
+
+# ---- LLM / 智能体 ----
+agno==1.6.3
+openai>=1.0.0
+
+# ---- HTTP ----
+requests==2.31.0
+
+# ---- 报表导出（Excel / PDF）----
+openpyxl==3.1.2
+pandas==2.0.3
+reportlab==4.0.4

@@ -1,0 +1,2 @@
+# Django 的 STATICFILES_DIRS 指向这里；保留占位文件让空目录也能进版本库。
+# 前端资源目前全部走 CDN（见 Roadmap：后续会本地化到这里）。

@@ -1,0 +1,7 @@
+# ---- 开发 / 测试工具 ----
+pytest>=7.4
+pytest-django>=4.5
+ruff>=0.5
+
+# ---- 端到端测试脚本（scripts/qa/）----
+playwright>=1.40
