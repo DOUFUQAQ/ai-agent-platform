@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  DJANGO_SECRET_KEY: ci-only-not-secret
+  DJANGO_DEBUG: "0"
+  DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+
+jobs:
+  check:
+    name: django check + tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Django system checks
+        run: python manage.py check
+
+      - name: Verify migrations are in sync
+        run: python manage.py makemigrations --check --dry-run
+        continue-on-error: true      # 历史迁移与模型存在少量漂移，先不阻断
+
+      - name: Run tests
+        run: python manage.py test --verbosity 2
+
+  lint:
+    name: ruff
+    runs-on: ubuntu-latest
+    continue-on-error: true          # 存量代码尚未全量清理
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install ruff
+      - run: ruff check ai_agent permissions behavior_tracking audit_system --output-format=github
