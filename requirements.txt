@@ -15,5 +15,5 @@ requests==2.31.0
 
 # ---- 报表导出（Excel / PDF）----
 openpyxl==3.1.2
-pandas==2.0.3
+pandas>=2.2          # 3.12 起 pandas 2.0.x 没有预编译 wheel，会退化成源码编译
 reportlab==4.0.4
